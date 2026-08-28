@@ -22,6 +22,7 @@ const RECHECK_DAYS: Record<string, number> = {
   ldl: 365,
   hdl: 365,
   triglycerides: 365,
+  vldl: 365,
   hba1c: 180,
   fastingGlucose: 180,
   tsh: 365,
