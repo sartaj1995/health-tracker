@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { DriveCard } from "@/components/DriveCard";
 import { BTN_SECONDARY, Card, SectionTitle, Segment } from "@/components/ui";
 import { getMetric } from "@/lib/metrics";
 import { todayISO } from "@/lib/stats";
+import { parseSnapshot } from "@/lib/storage";
 import { useStore } from "@/lib/store";
-import type { Entry, Profile } from "@/lib/types";
+import type { Entry } from "@/lib/types";
 
 function download(filename: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -50,18 +52,13 @@ export default function SettingsPage() {
     file
       .text()
       .then((text) => {
-        const parsed = JSON.parse(text) as { entries?: Entry[]; profile?: Profile };
-        if (!Array.isArray(parsed.entries)) throw new Error("no entries array");
-        const valid = parsed.entries.filter(
-          (e) => e && typeof e.metricId === "string" && typeof e.value === "number" && typeof e.date === "string",
+        const snapshot = parseSnapshot(text);
+        importSnapshot(snapshot);
+        setMessage(
+          `Imported ${snapshot.entries.length} readings, replacing what was here before.`,
         );
-        importSnapshot({
-          entries: valid,
-          profile: { ...profile, ...(parsed.profile ?? {}) },
-        });
-        setMessage(`Imported ${valid.length} readings, replacing what was here before.`);
       })
-      .catch(() => setError("That file does not look like a Health Tracker backup."));
+      .catch((err: Error) => setError(err.message));
   }
 
   if (!ready) {
@@ -203,6 +200,8 @@ export default function SettingsPage() {
           ) : null}
         </Card>
       </section>
+
+      <DriveCard />
 
       <section className="mb-6">
         <SectionTitle>Danger zone</SectionTitle>
