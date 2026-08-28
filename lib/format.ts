@@ -1,0 +1,68 @@
+import type { Metric } from "./types";
+import { todayISO } from "./stats";
+
+export function formatValue(metric: Metric, value: number): string {
+  const n = value.toFixed(metric.decimals);
+  // Step counts read much better grouped.
+  return metric.id === "steps" ? Number(n).toLocaleString("en-IN") : n;
+}
+
+/** "128/82" for blood pressure, plain number otherwise. */
+export function formatReading(
+  metric: Metric,
+  value: number,
+  value2?: number,
+): string {
+  const main = formatValue(metric, value);
+  return metric.secondary && value2 !== undefined
+    ? `${main}/${value2.toFixed(metric.decimals)}`
+    : main;
+}
+
+export function formatDelta(metric: Metric, delta: number): string {
+  const sign = delta > 0 ? "+" : delta < 0 ? "-" : "";
+  return `${sign}${formatValue(metric, Math.abs(delta))}`;
+}
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+export function formatDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const thisYear = new Date().getFullYear();
+  return y === thisYear
+    ? `${d} ${MONTHS[m - 1]}`
+    : `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+export function formatFullDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  const ms =
+    new Date(by, bm - 1, bd).getTime() - new Date(ay, am - 1, ad).getTime();
+  return Math.round(ms / 86400000);
+}
+
+/** "Today", "Yesterday", "5 days ago", then falls back to a date. */
+export function relativeDate(iso: string): string {
+  const diff = daysBetween(iso, todayISO());
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff > 1 && diff < 7) return `${diff} days ago`;
+  if (diff < 0) return formatDate(iso);
+  if (diff < 30) return `${Math.floor(diff / 7)} week${diff < 14 ? "" : "s"} ago`;
+  return formatDate(iso);
+}
+
+export function daysAgo(iso: string): number {
+  return daysBetween(iso, todayISO());
+}
