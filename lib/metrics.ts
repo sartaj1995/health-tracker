@@ -276,6 +276,23 @@ export const METRICS: Metric[] = [
       { to: null, level: "bad", label: "Very high" },
     ],
   },
+  {
+    id: "vldl",
+    label: "VLDL cholesterol",
+    unit: "mg/dL",
+    category: "Lipids",
+    direction: "down",
+    decimals: 0,
+    step: 1,
+    min: 1,
+    max: 200,
+    bands: [
+      { to: 30, level: "good", label: "Normal" },
+      { to: 40, level: "warn", label: "Borderline high" },
+      { to: null, level: "bad", label: "High" },
+    ],
+    help: "Most labs calculate this as triglycerides divided by 5 rather than measuring it, so it tracks your triglycerides almost exactly.",
+  },
 
   // -------------------------------------------------- Vitamins & minerals
   {
