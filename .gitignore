@@ -9,3 +9,7 @@ build
 next-env.d.ts
 .vercel
 *.tsbuildinfo
+
+# Python bytecode from the vendored skill scripts
+__pycache__/
+*.py[cod]

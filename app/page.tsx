@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { MetricCard } from "@/components/MetricCard";
 import { PlusIcon } from "@/components/icons";
-import { Card, EmptyState, SectionTitle, StatusPill } from "@/components/ui";
+import { BTN_PRIMARY, Card, EmptyState, SectionTitle, StatusPill } from "@/components/ui";
 import { daysAgo, formatReading, relativeDate } from "@/lib/format";
 import { METRICS, bandsFor, classify, getMetric } from "@/lib/metrics";
 import { seriesFor, summarize, trackedMetricIds } from "@/lib/stats";
@@ -93,10 +93,7 @@ export default function DashboardPage() {
           title="Nothing logged yet"
           body="Add your first reading — weight, a blood test result, blood pressure, anything. Charts and reference ranges appear as soon as there is something to plot."
           action={
-            <Link
-              href="/add"
-              className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 font-medium text-white"
-            >
+            <Link href="/add" className={BTN_PRIMARY}>
               <PlusIcon className="h-4 w-4" />
               Add a reading
             </Link>
@@ -118,7 +115,7 @@ export default function DashboardPage() {
               <Link
                 key={metric.id}
                 href={`/m/${metric.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 transition-colors first:rounded-t-2xl last:rounded-b-2xl active:bg-surface-2"
+                className="flex min-h-11 items-center justify-between gap-3 px-4 py-3 transition-colors duration-200 first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface-2/60 active:bg-surface-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{metric.label}</p>
@@ -142,8 +139,14 @@ export default function DashboardPage() {
       <section className="mb-6">
         <SectionTitle>Your metrics</SectionTitle>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map(({ id, points }) => (
-            <MetricCard key={id} metricId={id} points={points} profile={profile} />
+          {cards.map(({ id, points }, i) => (
+            <MetricCard
+              key={id}
+              metricId={id}
+              points={points}
+              profile={profile}
+              index={i}
+            />
           ))}
         </div>
       </section>
@@ -154,13 +157,16 @@ export default function DashboardPage() {
           <Card>
             <ul className="space-y-1.5 text-sm">
               {due.map(({ metric, age }) => (
-                <li key={metric.id} className="flex justify-between gap-3">
-                  <Link href={`/m/${metric.id}`} className="hover:text-accent">
-                    {metric.label}
+                <li key={metric.id}>
+                  <Link
+                    href={`/m/${metric.id}`}
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-1 transition-colors duration-200 hover:text-accent"
+                  >
+                    <span>{metric.label}</span>
+                    <span className="shrink-0 text-muted">
+                      {Math.floor(age / 30)} months ago
+                    </span>
                   </Link>
-                  <span className="shrink-0 text-muted">
-                    {Math.floor(age / 30)} months ago
-                  </span>
                 </li>
               ))}
             </ul>

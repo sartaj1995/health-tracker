@@ -12,7 +12,7 @@ import {
 import { formatFullDate } from "@/lib/format";
 import { todayISO } from "@/lib/stats";
 import { useStore } from "@/lib/store";
-import { StatusPill } from "./ui";
+import { BTN_PRIMARY, BTN_SECONDARY, Segment, StatusPill } from "./ui";
 
 function yesterdayISO(): string {
   const d = new Date();
@@ -136,22 +136,17 @@ export function AddEntryForm() {
       {recent.length > 0 && !editing ? (
         <div className="mb-5 flex flex-wrap gap-2">
           {recent.map((m) => (
-            <button
+            <Segment
               key={m!.id}
-              type="button"
+              active={metricId === m!.id}
               onClick={() => {
                 setMetricId(m!.id);
                 setSaved(null);
                 valueRef.current?.focus();
               }}
-              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                metricId === m!.id
-                  ? "border-accent bg-accent-soft text-accent"
-                  : "border-border text-muted"
-              }`}
             >
               {m!.label}
-            </button>
+            </Segment>
           ))}
         </div>
       ) : null}
@@ -165,7 +160,7 @@ export function AddEntryForm() {
               setSaved(null);
               setError(null);
             }}
-            className="w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-base outline-none focus:border-accent"
+            className="min-h-11 w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-base outline-none transition-colors duration-200 focus:border-accent"
           >
             {metricsByCategory(ENTERABLE).map((group) => (
               <optgroup key={group.category} label={group.category}>
@@ -198,7 +193,7 @@ export function AddEntryForm() {
               type="text"
               autoComplete="off"
               placeholder={lastValue ? String(lastValue.value) : "0"}
-              className="tnum w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-2xl font-semibold outline-none focus:border-accent"
+              className="tnum min-h-14 w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-2xl font-semibold outline-none transition-colors duration-200 focus:border-accent"
             />
             {metric.secondary ? (
               <input
@@ -209,7 +204,7 @@ export function AddEntryForm() {
                 autoComplete="off"
                 placeholder={lastValue?.value2 !== undefined ? String(lastValue.value2) : "0"}
                 aria-label={metric.secondary.label}
-                className="tnum w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-2xl font-semibold outline-none focus:border-accent"
+                className="tnum min-h-14 w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-2xl font-semibold outline-none transition-colors duration-200 focus:border-accent"
               />
             ) : null}
           </div>
@@ -233,7 +228,7 @@ export function AddEntryForm() {
               value={date}
               max={todayISO()}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-base outline-none focus:border-accent"
+              className="min-h-11 w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-base outline-none transition-colors duration-200 focus:border-accent"
             />
           </div>
           <div className="mt-2 flex gap-2">
@@ -248,7 +243,7 @@ export function AddEntryForm() {
             onChange={(e) => setNote(e.target.value)}
             type="text"
             placeholder="Fasting, after gym, lab name..."
-            className="w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-base outline-none focus:border-accent"
+            className="min-h-11 w-full rounded-xl border border-border bg-surface-2 px-3 py-3 text-base outline-none transition-colors duration-200 focus:border-accent"
           />
         </Field>
 
@@ -256,28 +251,25 @@ export function AddEntryForm() {
       </div>
 
       {error ? (
-        <p role="alert" className="mt-3 text-sm text-bad">
+        <p role="alert" aria-live="assertive" className="mt-3 text-sm text-bad">
           {error}
         </p>
       ) : null}
       {saved ? (
-        <p role="status" className="mt-3 text-sm text-good">
+        <p role="status" aria-live="polite" className="mt-3 text-sm text-good">
           {saved} — add another, or head back to the dashboard.
         </p>
       ) : null}
 
       <div className="mt-4 flex gap-2">
-        <button
-          type="submit"
-          className="flex-1 rounded-xl bg-accent px-4 py-3 font-medium text-white active:opacity-90"
-        >
+        <button type="submit" className={`${BTN_PRIMARY} min-h-12 flex-1`}>
           {editing ? "Save changes" : "Save reading"}
         </button>
         {editing ? (
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-xl border border-border px-4 py-3 font-medium text-muted"
+            className={`${BTN_SECONDARY} min-h-12`}
           >
             Cancel
           </button>
@@ -319,16 +311,8 @@ function QuickDate({
   onPick: (v: string) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onPick(value)}
-      className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
-        current === value
-          ? "border-accent bg-accent-soft text-accent"
-          : "border-border text-muted"
-      }`}
-    >
+    <Segment active={current === value} onClick={() => onPick(value)}>
       {label}
-    </button>
+    </Segment>
   );
 }

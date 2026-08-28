@@ -4,7 +4,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MetricChart } from "@/components/MetricChart";
 import { ArrowLeftIcon, PlusIcon, TrashIcon, TrendDownIcon, TrendUpIcon } from "@/components/icons";
-import { Card, EmptyState, SectionTitle, StatusPill, levelColor } from "@/components/ui";
+import {
+  BTN_ICON,
+  BTN_PRIMARY,
+  BTN_SECONDARY,
+  Card,
+  EmptyState,
+  SectionTitle,
+  Segment,
+  StatusPill,
+  levelColor,
+} from "@/components/ui";
 import { formatDelta, formatFullDate, formatReading, formatValue, relativeDate } from "@/lib/format";
 import { bandsFor, classify, getMetric } from "@/lib/metrics";
 import {
@@ -78,19 +88,11 @@ export function MetricDetail({ metricId }: { metricId: string }) {
       <div className="mb-4 flex items-center justify-between gap-3">
         <BackLink />
         <div className="flex gap-2">
-          <button
-            onClick={togglePin}
-            className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-              pinned ? "border-accent bg-accent-soft text-accent" : "border-border text-muted"
-            }`}
-          >
+          <Segment active={pinned} onClick={togglePin}>
             {pinned ? "Pinned" : "Pin to top"}
-          </button>
+          </Segment>
           {!metric.derived ? (
-            <Link
-              href={`/add?metric=${metric.id}`}
-              className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
-            >
+            <Link href={`/add?metric=${metric.id}`} className={`${BTN_PRIMARY} text-sm`}>
               <PlusIcon className="h-4 w-4" />
               Add
             </Link>
@@ -112,10 +114,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
             }
             action={
               !metric.derived ? (
-                <Link
-                  href={`/add?metric=${metric.id}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 font-medium text-white"
-                >
+                <Link href={`/add?metric=${metric.id}`} className={BTN_PRIMARY}>
                   <PlusIcon className="h-4 w-4" />
                   Add a reading
                 </Link>
@@ -158,21 +157,26 @@ export function MetricDetail({ metricId }: { metricId: string }) {
           <div className="mt-5 rounded-2xl border border-border bg-surface p-4">
             <div className="mb-3 flex justify-end gap-1">
               {RANGES.map((r) => (
-                <button
+                <Segment
                   key={r.key}
+                  active={range === r.key}
                   onClick={() => setRange(r.key)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                    range === r.key ? "bg-accent-soft text-accent" : "text-muted"
-                  }`}
+                  aria-label={`Show the last ${r.label}`}
                 >
                   {r.label}
-                </button>
+                </Segment>
               ))}
             </div>
             <MetricChart metric={metric} points={points} profile={profile} />
             {metric.secondary ? (
               <p className="mt-2 text-center text-xs text-muted">
                 Solid line: systolic &middot; dashed line: {metric.secondary.label.toLowerCase()}
+              </p>
+            ) : null}
+            {points.length > 0 && points.length < 4 ? (
+              <p className="mt-2 text-center text-xs text-muted">
+                {points.length === 1 ? "One reading" : `${points.length} readings`} so far — too
+                few to read a trend from. The line stays dashed until there are four.
               </p>
             ) : null}
           </div>
@@ -200,10 +204,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                 placeholder={`Target ${metric.label.toLowerCase()}`}
                 className="tnum w-full rounded-xl border border-border bg-surface-2 px-3 py-2 outline-none focus:border-accent"
               />
-              <button
-                onClick={saveTarget}
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
-              >
+              <button onClick={saveTarget} className={`${BTN_PRIMARY} text-sm`}>
                 Save
               </button>
             </div>
@@ -227,7 +228,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                   setTargetDraft(target !== undefined ? String(target) : "");
                   setEditingTarget(true);
                 }}
-                className="shrink-0 text-sm font-medium text-accent"
+                className={`${BTN_SECONDARY} shrink-0 text-sm`}
               >
                 {target !== undefined ? "Change" : "Set"}
               </button>
@@ -301,14 +302,14 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                     <>
                       <Link
                         href={`/add?edit=${point.entryId}`}
-                        className="text-sm font-medium text-accent"
+                        className="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-surface-2"
                       >
                         Edit
                       </Link>
                       <button
                         onClick={() => deleteEntry(point.entryId!)}
                         aria-label={`Delete reading from ${formatFullDate(point.date)}`}
-                        className="rounded-lg p-1.5 text-muted transition-colors hover:text-bad"
+                        className={`${BTN_ICON} hover:text-bad`}
                       >
                         <TrashIcon />
                       </button>
@@ -328,7 +329,10 @@ export function MetricDetail({ metricId }: { metricId: string }) {
 
 function BackLink() {
   return (
-    <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-text">
+    <Link
+      href="/"
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-xl pr-2 text-sm text-muted transition-colors duration-200 hover:text-text"
+    >
       <ArrowLeftIcon className="h-4 w-4" />
       Dashboard
     </Link>

@@ -8,6 +8,10 @@ const LEVEL_STYLES: Record<Level, string> = {
   bad: "bg-bad/12 text-bad",
 };
 
+/**
+ * Status carries meaning, so it never rides on colour alone: the band name is
+ * always spelled out next to the dot.
+ */
 export function StatusPill({
   level,
   label,
@@ -19,10 +23,14 @@ export function StatusPill({
 }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full font-medium ${
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full font-medium ${
         LEVEL_STYLES[level]
-      } ${size === "md" ? "px-3 py-1 text-sm" : "px-2 py-0.5 text-[11px]"}`}
+      } ${size === "md" ? "px-3 py-1 text-sm" : "px-2.5 py-1 text-xs"}`}
     >
+      <span
+        aria-hidden
+        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80"
+      />
       {label}
     </span>
   );
@@ -75,5 +83,40 @@ export function EmptyState({
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted">{body}</p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
+  );
+}
+
+/** Shared control sizing — every interactive element clears 44px. */
+export const BTN_BASE =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl font-medium transition-colors duration-200";
+
+export const BTN_PRIMARY = `${BTN_BASE} bg-accent px-4 text-white hover:opacity-90 active:opacity-80`;
+
+export const BTN_SECONDARY = `${BTN_BASE} border border-border px-4 text-text hover:bg-surface-2`;
+
+/** A small square control (icon-only) that still meets the 44px minimum. */
+export const BTN_ICON =
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted transition-colors duration-200 hover:bg-surface-2";
+
+/** Segmented pill used for ranges, themes and quick dates. */
+export function Segment({
+  active,
+  children,
+  className = "",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { active: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      {...props}
+      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors duration-200 ${
+        active
+          ? "border-accent bg-accent-soft text-accent"
+          : "border-border text-muted hover:bg-surface-2"
+      } ${className}`}
+    >
+      {children}
+    </button>
   );
 }

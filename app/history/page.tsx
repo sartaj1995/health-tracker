@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { TrashIcon } from "@/components/icons";
-import { Card, EmptyState, StatusPill } from "@/components/ui";
+import { PencilIcon, TrashIcon } from "@/components/icons";
+import { BTN_ICON, BTN_PRIMARY, Card, EmptyState, StatusPill } from "@/components/ui";
 import { formatFullDate, formatReading, relativeDate } from "@/lib/format";
 import { METRICS, bandsFor, classify, getMetric } from "@/lib/metrics";
 import { useStore } from "@/lib/store";
@@ -44,7 +44,7 @@ export default function HistoryPage() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+            className="min-h-11 rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors duration-200 focus:border-accent"
           >
             <option value="all">All metrics</option>
             {used.map((m) => (
@@ -65,10 +65,7 @@ export default function HistoryPage() {
               : "Nothing recorded for that metric yet."
           }
           action={
-            <Link
-              href="/add"
-              className="inline-flex rounded-xl bg-accent px-4 py-2.5 font-medium text-white"
-            >
+            <Link href="/add" className={BTN_PRIMARY}>
               Add a reading
             </Link>
           }
@@ -90,35 +87,48 @@ export default function HistoryPage() {
                     if (!metric) return null;
                     const status = classify(entry.value, bandsFor(metric, profile));
                     return (
-                      <li key={entry.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <Link
-                            href={`/m/${metric.id}`}
-                            className="text-sm font-medium hover:text-accent"
-                          >
-                            {metric.label}
-                          </Link>
-                          {entry.note ? (
-                            <p className="truncate text-xs text-muted">{entry.note}</p>
+                      <li key={entry.id} className="flex items-center gap-1 px-3 py-1.5">
+                        {/*
+                          Two lines rather than one: at 375px a single row
+                          could not hold label, value, status, note and two
+                          actions without either overflowing or squeezing the
+                          tap targets below 44px.
+                        */}
+                        <Link
+                          href={`/m/${metric.id}`}
+                          className="flex min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors duration-200 hover:bg-surface-2"
+                        >
+                          <span className="flex items-baseline gap-2">
+                            <span className="truncate text-sm font-medium">{metric.label}</span>
+                            <span className="tnum ml-auto shrink-0 text-sm font-semibold">
+                              {formatReading(metric, entry.value, entry.value2)}
+                              {metric.unit ? (
+                                <span className="ml-1 font-normal text-muted">{metric.unit}</span>
+                              ) : null}
+                            </span>
+                          </span>
+                          {status || entry.note ? (
+                            <span className="flex min-w-0 items-center gap-2">
+                              {status ? (
+                                <StatusPill level={status.level} label={status.label} />
+                              ) : null}
+                              {entry.note ? (
+                                <span className="truncate text-xs text-muted">{entry.note}</span>
+                              ) : null}
+                            </span>
                           ) : null}
-                        </div>
-                        {status ? <StatusPill level={status.level} label={status.label} /> : null}
-                        <span className="tnum shrink-0 text-sm font-semibold">
-                          {formatReading(metric, entry.value, entry.value2)}
-                          {metric.unit ? (
-                            <span className="ml-1 font-normal text-muted">{metric.unit}</span>
-                          ) : null}
-                        </span>
+                        </Link>
                         <Link
                           href={`/add?edit=${entry.id}`}
-                          className="shrink-0 text-sm font-medium text-accent"
+                          aria-label={`Edit ${metric.label} reading from ${formatFullDate(entry.date)}`}
+                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-medium text-accent transition-colors duration-200 hover:bg-surface-2"
                         >
-                          Edit
+                          <PencilIcon />
                         </Link>
                         <button
                           onClick={() => deleteEntry(entry.id)}
                           aria-label={`Delete ${metric.label} reading from ${formatFullDate(entry.date)}`}
-                          className="shrink-0 rounded-lg p-1.5 text-muted transition-colors hover:text-bad"
+                          className={`${BTN_ICON} hover:text-bad`}
                         >
                           <TrashIcon />
                         </button>
