@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fira_Code, Fira_Sans } from "next/font/google";
 import { Nav } from "@/components/Nav";
+import { DriveAutoBackup } from "@/components/DriveAutoBackup";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { ThemeSync } from "@/components/ThemeSync";
 import { StoreProvider } from "@/lib/store";
@@ -84,6 +85,7 @@ export default function RootLayout({
         <StoreProvider>
           <ThemeSync />
           <ServiceWorker />
+          <DriveAutoBackup />
           <Nav />
           <main
             id="main"

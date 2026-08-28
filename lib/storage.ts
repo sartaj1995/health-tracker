@@ -49,6 +49,44 @@ export const localRepo: HealthRepo = {
   },
 };
 
+/**
+ * Turn backup text into a snapshot, or explain why it cannot.
+ *
+ * Shared by the Settings file import and the Drive restore so the two can never
+ * disagree about what counts as a valid backup. Unrecognisable rows are dropped
+ * rather than failing the whole restore — a backup that is 99% readable is
+ * still worth having back.
+ */
+export function parseSnapshot(text: string): Snapshot {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error("That file is not valid JSON.");
+  }
+
+  const doc = raw as { entries?: unknown; profile?: unknown };
+  if (!Array.isArray(doc.entries)) {
+    throw new Error("That file does not look like a Health Tracker backup.");
+  }
+
+  const entries = (doc.entries as Entry[]).filter(
+    (e) =>
+      e &&
+      typeof e.metricId === "string" &&
+      typeof e.value === "number" &&
+      Number.isFinite(e.value) &&
+      typeof e.date === "string",
+  );
+
+  const profile =
+    doc.profile && typeof doc.profile === "object"
+      ? { ...DEFAULT_PROFILE, ...(doc.profile as Profile) }
+      : DEFAULT_PROFILE;
+
+  return { entries, profile };
+}
+
 export function newId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
