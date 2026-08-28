@@ -15,7 +15,14 @@ import {
   StatusPill,
   levelColor,
 } from "@/components/ui";
-import { formatDelta, formatFullDate, formatReading, formatValue, relativeDate } from "@/lib/format";
+import {
+  formatDelta,
+  formatFullDate,
+  formatReading,
+  formatValue,
+  inSentence,
+  relativeDate,
+} from "@/lib/format";
 import { bandsFor, classify, getMetric } from "@/lib/metrics";
 import {
   RANGES,
@@ -106,7 +113,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
       {!summary ? (
         <div className="mt-6">
           <EmptyState
-            title={`No ${metric.label.toLowerCase()} readings yet`}
+            title={`No ${inSentence(metric.label)} readings yet`}
             body={
               metric.derived
                 ? "BMI appears once you have logged both a height and a weight."
@@ -170,7 +177,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
             <MetricChart metric={metric} points={points} profile={profile} />
             {metric.secondary ? (
               <p className="mt-2 text-center text-xs text-muted">
-                Solid line: systolic &middot; dashed line: {metric.secondary.label.toLowerCase()}
+                Solid line: systolic &middot; dashed line: {inSentence(metric.secondary.label)}
               </p>
             ) : null}
             {points.length > 0 && points.length < 4 ? (
@@ -201,7 +208,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                 onChange={(e) => setTargetDraft(e.target.value)}
                 inputMode="decimal"
                 type="text"
-                placeholder={`Target ${metric.label.toLowerCase()}`}
+                placeholder={`Target ${inSentence(metric.label)}`}
                 className="tnum w-full rounded-xl border border-border bg-surface-2 px-3 py-2 outline-none focus:border-accent"
               />
               <button onClick={saveTarget} className={`${BTN_PRIMARY} text-sm`}>

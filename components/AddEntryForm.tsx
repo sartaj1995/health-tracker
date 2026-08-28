@@ -9,7 +9,7 @@ import {
   getMetric,
   metricsByCategory,
 } from "@/lib/metrics";
-import { formatFullDate } from "@/lib/format";
+import { formatFullDate, inSentence } from "@/lib/format";
 import { todayISO } from "@/lib/stats";
 import { useStore } from "@/lib/store";
 import { BTN_PRIMARY, BTN_SECONDARY, Segment, StatusPill } from "./ui";
@@ -85,11 +85,11 @@ export function AddEntryForm() {
       return;
     }
     if (metric.min !== undefined && num < metric.min) {
-      setError(`That looks too low for ${metric.label.toLowerCase()} (minimum ${metric.min}).`);
+      setError(`That looks too low for ${inSentence(metric.label)} (minimum ${metric.min}).`);
       return;
     }
     if (metric.max !== undefined && num > metric.max) {
-      setError(`That looks too high for ${metric.label.toLowerCase()} (maximum ${metric.max}).`);
+      setError(`That looks too high for ${inSentence(metric.label)} (maximum ${metric.max}).`);
       return;
     }
 
@@ -97,7 +97,7 @@ export function AddEntryForm() {
     if (metric.secondary) {
       const n2 = Number(value2.replace(",", "."));
       if (value2.trim() === "" || !Number.isFinite(n2)) {
-        setError(`Enter the ${metric.secondary.label.toLowerCase()} value too.`);
+        setError(`Enter the ${inSentence(metric.secondary.label)} value too.`);
         return;
       }
       second = n2;

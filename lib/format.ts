@@ -1,6 +1,21 @@
 import type { Metric } from "./types";
 import { todayISO } from "./stats";
 
+/**
+ * A metric name fit to drop into the middle of a sentence.
+ *
+ * Plain `.toLowerCase()` turns "VLDL cholesterol" into "vldl cholesterol" and
+ * "Vitamin D" into "vitamin d". Only an ordinary Capitalised word gets folded;
+ * acronyms (VLDL, TSH, BMI), mixed case (HbA1c) and single letters (the D in
+ * Vitamin D) are left exactly as they are.
+ */
+export function inSentence(label: string): string {
+  return label
+    .split(" ")
+    .map((word) => (/^[A-Z][a-z]+$/.test(word) ? word.toLowerCase() : word))
+    .join(" ");
+}
+
 export function formatValue(metric: Metric, value: number): string {
   const n = value.toFixed(metric.decimals);
   // Step counts read much better grouped.
