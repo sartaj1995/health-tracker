@@ -2,36 +2,57 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Palette: calm cyan + health green, the combination the design pass
+ * recommended for health products.
+ *
+ * Every light-mode value below was picked against a measured contrast ratio,
+ * not by eye. The recommended cyan-600 (#0891B2) only reaches 3.4:1 on our
+ * background, so it is demoted to a chart-stroke colour (where the bar is 3:1)
+ * and cyan-700 carries all text and interactive states.
+ */
 :root {
-  --bg: #f5f6f8;
+  --bg: #f4f7f8;
   --surface: #ffffff;
-  --surface-2: #f0f1f4;
-  --border: #e3e5ea;
-  --text: #14161a;
-  --muted: #6b7280;
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
+  --surface-2: #eef2f4;
+  --border: #dde5e8;
+  --text: #101418;
+  --muted: #5a6472; /* 5.57:1 on bg */
+  --accent: #0e7490; /* 4.98:1 on bg, white on it 5.36:1 */
+  --accent-soft: #e0f4f8;
+  --accent-ring: #0891b2;
 
-  --good: #059669;
-  --warn: #d97706;
-  --bad: #dc2626;
-  --info: #0284c7;
+  /* Status: meaning-bearing, so all clear 4.5:1 even at small sizes. */
+  --good: #047857; /* 5.09:1 */
+  --warn: #b45309; /* 4.66:1 */
+  --bad: #b91c1c; /* 6.01:1 */
+
+  /* Chart ink — only needs 3:1 as a non-text graphical object. */
+  --data: #0891b2;
+  --data-2: #7c3aed;
+
+  --scrim: rgb(15 23 42 / 0.5);
 }
 
 .dark {
-  --bg: #0b0d12;
-  --surface: #14171f;
-  --surface-2: #1c2029;
-  --border: #262b36;
-  --text: #e8eaee;
-  --muted: #939aa8;
-  --accent: #818cf8;
-  --accent-soft: #1e2138;
+  --bg: #0b0f14;
+  --surface: #131922;
+  --surface-2: #1b2330;
+  --border: #27313f;
+  --text: #e6ebf0;
+  --muted: #94a3b8; /* 7.50:1 on bg */
+  --accent: #22d3ee; /* 10.63:1 on bg */
+  --accent-soft: #0d2b33;
+  --accent-ring: #22d3ee;
 
-  --good: #34d399;
-  --warn: #fbbf24;
-  --bad: #f87171;
-  --info: #38bdf8;
+  --good: #34d399; /* 10.00:1 */
+  --warn: #fbbf24; /* 11.51:1 */
+  --bad: #f87171; /* 6.95:1 */
+
+  --data: #22d3ee;
+  --data-2: #a78bfa;
+
+  --scrim: rgb(0 0 0 / 0.6);
 }
 
 @theme inline {
@@ -46,10 +67,15 @@
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
-  --color-info: var(--info);
+  --color-data: var(--data);
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  /* Fira Sans for language, Fira Code for numbers - the pairing the design
+     pass recommends for data products. Wired up via next/font in layout.tsx,
+     which self-hosts them, so there is no render-blocking font request. */
+  --font-sans: var(--font-fira-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-fira-code), ui-monospace, "SFMono-Regular", Menlo,
+    monospace;
 }
 
 html {
@@ -66,17 +92,20 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  /* Safe areas for iOS home-screen install */
   padding-bottom: env(safe-area-inset-bottom);
   overscroll-behavior-y: none;
 }
 
-/* Numbers line up in tables and stat blocks */
+/*
+ * Readings are numbers first and text second: monospaced digits so a column
+ * of values lines up and a changing figure does not make the layout twitch.
+ */
 .tnum {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Native controls follow the theme */
 input,
 select,
 textarea,
@@ -85,9 +114,73 @@ button {
   color: inherit;
 }
 
-/* Kill the iOS Safari tap highlight; we render our own active states */
+/*
+ * Tailwind v4's preflight leaves buttons on the UA default cursor, which reads
+ * as "not clickable" on desktop.
+ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+label[for] {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/*
+ * One focus treatment for everything, visible in both themes. Keyboard-only
+ * (:focus-visible) so it never appears on a mouse press.
+ */
+/*
+ * The ring is drawn with box-shadow rather than outline-color: Chrome would
+ * not let an author value win for outline-color here (it kept resolving to
+ * currentColor even with !important), and box-shadow has the nicer property
+ * of following whatever border-radius the element already has. The
+ * transparent outline is what keeps the ring visible in Windows high-contrast
+ * mode, where transparent outlines are forced to a system colour.
+ */
+:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent-ring);
+}
+
+/* Comfortable hit area without forcing the visual size to grow with it. */
+.tap {
+  position: relative;
+}
+.tap::after {
+  content: "";
+  position: absolute;
+  inset: 50% 50% 50% 50%;
+  min-width: 44px;
+  min-height: 44px;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Subtle entrance — one idea, 300ms, and only for people who want motion. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -95,6 +188,11 @@ button {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .rise {
+    animation: none;
   }
 }

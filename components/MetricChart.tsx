@@ -1,9 +1,11 @@
 "use client";
 
+import { useId } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -87,6 +89,8 @@ export function MetricChart({
   points: Point[];
   profile: Profile;
 }) {
+  const fillId = useId();
+
   if (points.length === 0) return null;
 
   const bands = bandsFor(metric, profile);
@@ -111,13 +115,21 @@ export function MetricChart({
   const domain = scale.domain;
 
   const status = classify(points[points.length - 1].value, bands);
-  const stroke = status ? levelColor(status.level) : "var(--accent)";
-  const single = points.length === 1;
+  const stroke = status ? levelColor(status.level) : "var(--data)";
+  // Below four readings there is no trend to read, so the points are shown as
+  // markers rather than implying a line through them.
+  const sparse = points.length < 4;
 
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+        <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+          <defs>
+            <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={stroke} stopOpacity={0.2} />
+              <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
 
           {good ? (
@@ -177,27 +189,40 @@ export function MetricChart({
             cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
           />
 
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke="none"
+            fill={`url(#${fillId})`}
+            isAnimationActive={false}
+            activeDot={false}
+          />
           <Line
             type="monotone"
             dataKey="value"
             stroke={stroke}
-            strokeWidth={2.2}
-            dot={single ? { r: 4, fill: stroke } : { r: 2.5, fill: stroke, strokeWidth: 0 }}
-            activeDot={{ r: 5 }}
+            strokeWidth={sparse ? 1.5 : 2.2}
+            strokeDasharray={sparse ? "5 4" : undefined}
+            dot={sparse ? { r: 4, fill: stroke, strokeWidth: 0 } : { r: 2.5, fill: stroke, strokeWidth: 0 }}
+            /* 44px-equivalent grab area for touch, per the chart guidance. */
+            activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--surface)" }}
             isAnimationActive={false}
           />
           {metric.secondary ? (
             <Line
               type="monotone"
               dataKey="value2"
-              stroke="var(--info)"
+              stroke="var(--data-2)"
               strokeWidth={2}
+              /* Dashed, not merely a different colour - readable without
+                 relying on hue (WCAG 1.4.1). */
               strokeDasharray="4 3"
-              dot={{ r: 2.5, fill: "var(--info)", strokeWidth: 0 }}
+              dot={{ r: 2.5, fill: "var(--data-2)", strokeWidth: 0 }}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)" }}
               isAnimationActive={false}
             />
           ) : null}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

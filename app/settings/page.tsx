@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Card, SectionTitle } from "@/components/ui";
+import { BTN_SECONDARY, Card, SectionTitle, Segment } from "@/components/ui";
 import { getMetric } from "@/lib/metrics";
 import { todayISO } from "@/lib/stats";
 import { useStore } from "@/lib/store";
@@ -89,7 +89,7 @@ export default function SettingsPage() {
                 inputMode="decimal"
                 type="text"
                 placeholder="175"
-                className="tnum w-32 rounded-xl border border-border bg-surface-2 px-3 py-2 outline-none focus:border-accent"
+                className="tnum min-h-11 w-32 rounded-xl border border-border bg-surface-2 px-3 py-2 outline-none transition-colors duration-200 focus:border-accent"
               />
               <span className="text-sm text-muted">cm — used to work out your BMI</span>
             </div>
@@ -104,17 +104,14 @@ export default function SettingsPage() {
                   { key: "who", label: "WHO standard" },
                 ] as const
               ).map((option) => (
-                <button
+                <Segment
                   key={option.key}
+                  active={profile.bmiStandard === option.key}
                   onClick={() => updateProfile({ bmiStandard: option.key })}
-                  className={`flex-1 rounded-xl border px-3 py-2 text-sm transition-colors ${
-                    profile.bmiStandard === option.key
-                      ? "border-accent bg-accent-soft text-accent"
-                      : "border-border text-muted"
-                  }`}
+                  className="flex-1"
                 >
                   {option.label}
-                </button>
+                </Segment>
               ))}
             </div>
             <p className="mt-1.5 text-xs text-muted">
@@ -136,17 +133,14 @@ export default function SettingsPage() {
                 { key: "dark", label: "Dark" },
               ] as const
             ).map((option) => (
-              <button
+              <Segment
                 key={option.key}
+                active={profile.theme === option.key}
                 onClick={() => updateProfile({ theme: option.key })}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm transition-colors ${
-                  profile.theme === option.key
-                    ? "border-accent bg-accent-soft text-accent"
-                    : "border-border text-muted"
-                }`}
+                className="flex-1"
               >
                 {option.label}
-              </button>
+              </Segment>
             ))}
           </div>
         </Card>
@@ -169,19 +163,19 @@ export default function SettingsPage() {
                   "application/json",
                 )
               }
-              className="rounded-xl border border-border px-3 py-2 text-sm font-medium"
+              className={`${BTN_SECONDARY} text-sm`}
             >
               Export JSON
             </button>
             <button
               onClick={() => download(`health-tracker-${todayISO()}.csv`, toCSV(entries), "text/csv")}
-              className="rounded-xl border border-border px-3 py-2 text-sm font-medium"
+              className={`${BTN_SECONDARY} text-sm`}
             >
               Export CSV
             </button>
             <button
               onClick={() => fileRef.current?.click()}
-              className="rounded-xl border border-border px-3 py-2 text-sm font-medium"
+              className={`${BTN_SECONDARY} text-sm`}
             >
               Import backup
             </button>
@@ -197,8 +191,16 @@ export default function SettingsPage() {
               }}
             />
           </div>
-          {message ? <p className="text-sm text-good">{message}</p> : null}
-          {error ? <p className="text-sm text-bad">{error}</p> : null}
+          {message ? (
+            <p role="status" aria-live="polite" className="text-sm text-good">
+              {message}
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" aria-live="assertive" className="text-sm text-bad">
+              {error}
+            </p>
+          ) : null}
         </Card>
       </section>
 
@@ -217,13 +219,13 @@ export default function SettingsPage() {
                     setConfirmClear(false);
                     setMessage("All data deleted.");
                   }}
-                  className="rounded-xl bg-bad px-3 py-2 text-sm font-medium text-white"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-bad px-4 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90"
                 >
                   Yes, delete everything
                 </button>
                 <button
                   onClick={() => setConfirmClear(false)}
-                  className="rounded-xl border border-border px-3 py-2 text-sm font-medium"
+                  className={`${BTN_SECONDARY} text-sm`}
                 >
                   Cancel
                 </button>
@@ -232,7 +234,7 @@ export default function SettingsPage() {
           ) : (
             <button
               onClick={() => setConfirmClear(true)}
-              className="text-sm font-medium text-bad"
+              className="inline-flex min-h-11 items-center rounded-xl px-2 text-sm font-medium text-bad transition-colors duration-200 hover:bg-bad/10"
             >
               Delete all data
             </button>

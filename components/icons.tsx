@@ -97,3 +97,13 @@ export function HeartPulseIcon({ className = base }: IconProps) {
     </svg>
   );
 }
+
+export function PencilIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z" />
+      <path d="m13.5 6.5 4 4" />
+    </svg>
+  );
+}

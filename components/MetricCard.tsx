@@ -13,10 +13,12 @@ export function MetricCard({
   metricId,
   points,
   profile,
+  index = 0,
 }: {
   metricId: string;
   points: Point[];
   profile: Profile;
+  index?: number;
 }) {
   const metric = getMetric(metricId);
   const summary = summarize(points);
@@ -29,12 +31,15 @@ export function MetricCard({
     profile.targets[metric.id],
     summary.latest.value,
   );
-  const lineColor = status ? levelColor(status.level) : "var(--accent)";
+  const lineColor = status ? levelColor(status.level) : "var(--data)";
 
   return (
     <Link
       href={`/m/${metric.id}`}
-      className="block rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent/40 active:bg-surface-2"
+      /* Staggered by 40ms so the grid resolves in sequence rather than
+         all at once; disabled entirely under prefers-reduced-motion. */
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+      className="rise block rounded-2xl border border-border bg-surface p-4 transition-colors duration-200 hover:border-accent/50 hover:bg-surface-2/50 active:bg-surface-2"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="text-sm font-medium text-muted">{metric.label}</span>

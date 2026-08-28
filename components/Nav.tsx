@@ -31,10 +31,11 @@ export function Nav() {
             <Link
               key={href}
               href={href}
-              className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              aria-current={isActive(pathname, href) ? "page" : undefined}
+              className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm transition-colors duration-200 ${
                 isActive(pathname, href)
-                  ? "bg-accent-soft text-accent"
-                  : "text-muted hover:text-text"
+                  ? "bg-accent-soft font-medium text-accent"
+                  : "text-muted hover:bg-surface-2 hover:text-text"
               }`}
             >
               {label}
@@ -42,7 +43,7 @@ export function Nav() {
           ))}
           <Link
             href="/add"
-            className="ml-auto flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
+            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90"
           >
             <PlusIcon className="h-4 w-4" />
             Add reading
@@ -62,10 +63,19 @@ export function Nav() {
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-1 flex-col items-center justify-center gap-1 text-[11px] transition-colors ${
-                  active ? "text-accent" : "text-muted"
+                className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors duration-200 ${
+                  active ? "font-medium text-accent" : "text-muted"
                 }`}
               >
+                {/* The active tab is marked by an indicator bar as well as
+                    colour, so the current location is not signalled by hue
+                    alone (WCAG 1.4.1). */}
+                <span
+                  aria-hidden
+                  className={`absolute top-0 h-0.5 w-10 rounded-full transition-opacity duration-200 ${
+                    active ? "bg-accent opacity-100" : "opacity-0"
+                  }`}
+                />
                 <Icon className="h-[22px] w-[22px]" />
                 {label}
               </Link>
