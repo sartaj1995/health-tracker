@@ -4,22 +4,26 @@ import { useId } from "react";
 
 import type { Point } from "@/lib/stats";
 
-const W = 120;
-const H = 36;
 const PAD = 3;
 
 /** A tiny inline trend line for the dashboard cards - no chart library needed. */
 export function Sparkline({
   points,
   color,
+  width = 120,
+  height = 36,
 }: {
   points: Point[];
   color: string;
+  width?: number;
+  height?: number;
 }) {
   const gradientId = useId();
+  const W = width;
+  const H = height;
 
   if (points.length < 2) {
-    return <div className="h-9 w-[120px]" aria-hidden />;
+    return <div style={{ width: W, height: H }} aria-hidden />;
   }
 
   const values = points.map((p) => p.value);
@@ -42,7 +46,8 @@ export function Sparkline({
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className="h-9 w-[120px] overflow-visible"
+      style={{ width: W, height: H }}
+      className="shrink-0 overflow-visible"
       preserveAspectRatio="none"
       aria-hidden
     >

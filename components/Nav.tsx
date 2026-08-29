@@ -23,7 +23,10 @@ export function Nav() {
     <>
       <header className="sticky top-0 z-30 hidden border-b border-border bg-surface/80 backdrop-blur md:block">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-1 px-6">
-          <Link href="/" className="mr-6 flex items-center gap-2 font-semibold">
+          <Link
+            href="/"
+            className="mr-6 flex min-h-11 items-center gap-2 font-semibold"
+          >
             <HeartPulseIcon className="h-5 w-5 text-accent" />
             Health Tracker
           </Link>
