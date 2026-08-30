@@ -202,10 +202,27 @@ Then open <http://localhost:3000>.
 
 ```bash
 npm run build && npm start   # production build
+npm test                     # the test suite
 ```
 
 Node 18+ is all you need. No database to migrate, no `.env` to fill in, no API
 keys — the app runs complete on a fresh clone.
+
+### Tests
+
+146 tests over the pure logic, run with `npm test` and on every pull request.
+
+They exist mainly for one reason: a wrong reference threshold does not crash
+anything. It quietly reports a reading as **Normal** when it is not, and there
+is no way to notice. So every clinical boundary in the catalogue is pinned by a
+test — HbA1c flipping to *Prediabetic range* at exactly 5.7, LDL to *Near
+optimal* at 100, BMI to *Overweight* at 23 on South-Asian cutoffs and 25 on WHO.
+Change a cutoff and a test goes red naming the one you moved.
+
+The rest covers the logic that is easy to get subtly wrong: BMI pairing each
+weight with the height that was on record *on that date*, dates anchored at
+local midday so a timezone can never shift a reading a day, and backup parsing
+dropping unreadable rows without failing an otherwise good restore.
 
 <br>
 
