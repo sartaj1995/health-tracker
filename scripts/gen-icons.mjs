@@ -87,11 +87,12 @@ function drawIcon(size, { rounded = true } = {}) {
       }
       if (alpha <= 0) continue;
 
-      // Diagonal indigo -> violet gradient.
+      // Diagonal cyan gradient, matching the app's palette. Both ends stay
+      // dark enough that the white pulse holds at least 3:1 against them.
       const t = (x / size + y / size) / 2;
-      let r = lerp(79, 129, t);
-      let g = lerp(70, 88, t);
-      let b = lerp(229, 245, t);
+      let r = lerp(21, 8, t);    // #155E75 -> #0891B2
+      let g = lerp(94, 145, t);
+      let b = lerp(117, 178, t);
 
       // White pulse on top.
       let best = Infinity;
