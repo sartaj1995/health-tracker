@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -129,9 +130,19 @@ export function AddEntryForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-lg">
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">
         {editing ? "Edit reading" : "Add a reading"}
       </h1>
+
+      {!editing ? (
+        <p className="mb-5 text-sm text-muted">
+          Got a lab report?{" "}
+          <Link href="/import" className="font-medium text-accent hover:underline">
+            Paste it and import every reading at once
+          </Link>
+          .
+        </p>
+      ) : null}
 
       {recent.length > 0 && !editing ? (
         <div className="mb-5 flex flex-wrap gap-2">

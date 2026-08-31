@@ -115,6 +115,31 @@ reading*.
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+### Paste a whole lab report
+
+A lipid panel is six trips through a form, which is where logging usually
+stops. Paste the report text instead and every reading it recognises comes out
+at once, with the collection date read off the page and odd units converted.
+You check the rows before anything is saved.
+
+The parsing is plain code running in your browser — no model, no API call. A
+lab report is the most identifying thing here, and it never leaves the device.
+
+</td>
+<td width="50%" valign="top">
+
+### Tested where it matters
+
+A wrong reference threshold does not crash anything — it quietly reports a
+reading as *Normal* when it is not. So every clinical cutoff in the catalogue is
+pinned by a test, alongside the BMI pairing, the date handling and the report
+parser.
+
+</td>
+</tr>
 </table>
 
 <br>
@@ -393,7 +418,8 @@ backend.
 | [`lib/stats.ts`](lib/stats.ts) | Series building, derived BMI, summaries |
 | [`lib/storage.ts`](lib/storage.ts) | The `HealthRepo` seam and its `localStorage` implementation |
 | [`lib/drive.ts`](lib/drive.ts) · [`lib/sync.ts`](lib/sync.ts) | Google Drive OAuth and backup sync |
-| [`app/`](app) | Dashboard, add, history, settings, and `/m/[id]` per metric |
+| [`lib/labImport.ts`](lib/labImport.ts) | Reads a pasted lab report into readings |
+| [`app/`](app) | Dashboard, add, import, history, settings, and `/m/[id]` per metric |
 | [`components/`](components) | Cards, rows, charts, sparklines, form |
 | [`public/sw.js`](public/sw.js) | The service worker — caches the shell, nothing else |
 
