@@ -106,6 +106,14 @@ describe("classify boundary semantics", () => {
     ["vldl", 30, "Borderline high"],
     ["vldl", 40, "High"],
 
+    // Lp(a) is a risk stratifier rather than a range to sit inside, so the
+    // bands are named for the risk they carry. Values are mg/dL.
+    ["lpa", 29.9, "Low risk"],
+    ["lpa", 30, "Borderline"],
+    ["lpa", 49.9, "Borderline"],
+    ["lpa", 50, "High risk"],
+    ["lpa", 90, "Very high risk"],
+
     // Vitamin D is the awkward one: healthy sits in the middle, and too much
     // is its own warning.
     ["vitaminD", 19.9, "Deficient"],
@@ -250,5 +258,13 @@ describe("re-check windows", () => {
     for (const metric of METRICS) {
       if (metric.derived) expect(metric.recheckDays).toBeUndefined();
     }
+  });
+
+  it("leaves Lp(a) off the nudge on purpose", () => {
+    // It sits on the lipid panel, so the obvious tidy-up is to give it the 365
+    // its neighbours have. That would be wrong: Lp(a) is genetically set and
+    // holds steady for life, so a repeat draw tells you nothing new. This test
+    // exists to make that omission look deliberate rather than forgotten.
+    expect(getMetric("lpa")?.recheckDays).toBeUndefined();
   });
 });

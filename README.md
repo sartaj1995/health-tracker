@@ -56,10 +56,10 @@ knows the reference range for each one — so `34.1 ng/mL` shows up as
 <tr>
 <td width="50%" valign="top">
 
-### 26 metrics, ready to use
+### 27 metrics, ready to use
 
 Weight, height, body fat, waist, blood pressure, resting heart rate, SpO₂,
-fasting glucose, HbA1c, the full lipid panel including VLDL, vitamin D, B12,
+fasting glucose, HbA1c, the full lipid panel including VLDL and Lp(a), vitamin D, B12,
 ferritin, hemoglobin, TSH, creatinine, uric acid, ALT, sleep, steps, water.
 
 Grouped into eight categories so the dashboard stays readable as it fills up.
@@ -238,7 +238,7 @@ keys — the app runs complete on a fresh clone.
 
 ### Tests
 
-211 tests over the pure logic, run with `npm test` and on every pull request.
+225 tests over the pure logic, run with `npm test` and on every pull request.
 
 They exist mainly for one reason: a wrong reference threshold does not crash
 anything. It quietly reports a reading as **Normal** when it is not, and there
@@ -416,7 +416,7 @@ backend.
 
 | Path | What lives there |
 |:--|:--|
-| [`lib/metrics.ts`](lib/metrics.ts) | All 26 metrics and their reference bands — the heart of the app |
+| [`lib/metrics.ts`](lib/metrics.ts) | All 27 metrics and their reference bands — the heart of the app |
 | [`lib/types.ts`](lib/types.ts) | `Metric`, `Band`, `Entry`, `Profile` |
 | [`lib/stats.ts`](lib/stats.ts) | Series building, derived BMI, summaries |
 | [`lib/storage.ts`](lib/storage.ts) | The `HealthRepo` seam and its `localStorage` implementation |

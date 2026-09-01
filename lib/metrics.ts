@@ -300,6 +300,31 @@ export const METRICS: Metric[] = [
     ],
     help: "Most labs calculate this as triglycerides divided by 5 rather than measuring it, so it tracks your triglycerides almost exactly.",
   },
+  {
+    id: "lpa",
+    label: "Lp(a)",
+    unit: "mg/dL",
+    category: "Lipids",
+    direction: "down",
+    decimals: 1,
+    step: 0.1,
+    min: 0,
+    max: 300,
+    /*
+     * Deliberately no recheckDays. Every other line on this panel moves with
+     * how you have been eating and is worth repeating yearly; Lp(a) is set by
+     * a gene and holds steady for life, so it is a once-in-a-lifetime test.
+     * Putting it on the re-check nudge would be asking for a blood draw that
+     * can only tell you what you already know.
+     */
+    bands: [
+      { to: 30, level: "good", label: "Low risk" },
+      { to: 50, level: "warn", label: "Borderline" },
+      { to: 90, level: "bad", label: "High risk" },
+      { to: null, level: "bad", label: "Very high risk" },
+    ],
+    help: "Lipoprotein(a) — an inherited risk factor the standard lipid panel misses entirely. Set by your genes and barely moved by diet or statins, so it is measured once rather than tracked. Labs report it in either mg/dL or nmol/L and the two do not convert cleanly; these bands are mg/dL.",
+  },
 
   // -------------------------------------------------- Vitamins & minerals
   {
