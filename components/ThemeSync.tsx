@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useStore } from "@/lib/store";
+import { applyThemeColor } from "@/lib/theme";
 
 /** Keeps the <html> class in step with the theme setting, including live OS changes. */
 export function ThemeSync() {
@@ -15,6 +16,8 @@ export function ThemeSync() {
       const dark =
         profile.theme === "dark" || (profile.theme === "system" && media.matches);
       document.documentElement.classList.toggle("dark", dark);
+      // The browser's own chrome follows the app, not the OS.
+      applyThemeColor(dark);
     };
 
     apply();

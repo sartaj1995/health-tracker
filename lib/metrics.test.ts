@@ -210,3 +210,45 @@ describe("catalogue integrity", () => {
     }
   });
 });
+
+/**
+ * The re-check windows drive the dashboard's "might be due" nudge. They are
+ * clinical guidance like the bands are, so they get pinned the same way — a
+ * silent change here means the app stops asking for a test you should repeat.
+ */
+describe("re-check windows", () => {
+  const expected: Record<string, number> = {
+    fastingGlucose: 180,
+    hba1c: 180,
+    vitaminD: 180,
+    totalCholesterol: 365,
+    ldl: 365,
+    hdl: 365,
+    vldl: 365,
+    triglycerides: 365,
+    vitaminB12: 365,
+    ferritin: 365,
+    hemoglobin: 365,
+    tsh: 365,
+    creatinine: 365,
+    uricAcid: 365,
+    alt: 365,
+  };
+
+  it.each(Object.entries(expected))("re-checks %s after %i days", (id, days) => {
+    expect(getMetric(id)?.recheckDays).toBe(days);
+  });
+
+  it("nudges on the lab panels and nothing else", () => {
+    // Weight, steps and sleep are logged whenever you like — being nagged that
+    // a weight reading is "overdue" would be noise, not a prompt.
+    const withWindow = METRICS.filter((m) => m.recheckDays !== undefined).map((m) => m.id);
+    expect(withWindow.sort()).toEqual(Object.keys(expected).sort());
+  });
+
+  it("never puts a window on a metric you cannot enter", () => {
+    for (const metric of METRICS) {
+      if (metric.derived) expect(metric.recheckDays).toBeUndefined();
+    }
+  });
+});

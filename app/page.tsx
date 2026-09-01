@@ -16,25 +16,6 @@ const ORDER = new Map(METRICS.map((m, i) => [m.id, i]));
 /** How many cards to show when nothing has been pinned yet. */
 const RECENT_CARDS = 3;
 
-/** Lab panels are worth repeating a couple of times a year. */
-const RECHECK_DAYS: Record<string, number> = {
-  vitaminD: 180,
-  vitaminB12: 365,
-  ferritin: 365,
-  hemoglobin: 365,
-  totalCholesterol: 365,
-  ldl: 365,
-  hdl: 365,
-  vldl: 365,
-  triglycerides: 365,
-  hba1c: 180,
-  fastingGlucose: 180,
-  tsh: 365,
-  creatinine: 365,
-  uricAcid: 365,
-  alt: 365,
-};
-
 type Tracked = { id: string; points: Point[] };
 
 export default function DashboardPage() {
@@ -95,11 +76,10 @@ export default function DashboardPage() {
   const due = useMemo(
     () =>
       tracked.flatMap(({ id, points }) => {
-        const window = RECHECK_DAYS[id];
         const metric = getMetric(id);
-        if (!window || !metric) return [];
+        if (!metric?.recheckDays) return [];
         const age = daysAgo(points[points.length - 1].date);
-        return age >= window ? [{ metric, age }] : [];
+        return age >= metric.recheckDays ? [{ metric, age }] : [];
       }),
     [tracked],
   );
