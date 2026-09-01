@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useId, useRef } from "react";
 import type { Level } from "@/lib/types";
 
 const LEVEL_STYLES: Record<Level, string> = {
@@ -94,9 +95,83 @@ export const BTN_PRIMARY = `${BTN_BASE} bg-accent px-4 text-white hover:opacity-
 
 export const BTN_SECONDARY = `${BTN_BASE} border border-border px-4 text-text hover:bg-surface-2`;
 
+export const BTN_DANGER = `${BTN_BASE} bg-bad px-4 text-white hover:opacity-90 active:opacity-80`;
+
 /** A small square control (icon-only) that still meets the 44px minimum. */
 export const BTN_ICON =
   "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted transition-colors duration-200 hover:bg-surface-2";
+
+/**
+ * A yes/no gate in front of something irreversible.
+ *
+ * Built on the native <dialog> so `showModal()` supplies the focus trap, the
+ * Escape key and top-layer stacking, rather than three home-made versions of
+ * each. Focus lands on Cancel: the destructive button should never be the one
+ * a stray Enter press hits.
+ */
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel = "Delete",
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  body?: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (open && !el.open) el.showModal();
+    else if (!open && el.open) el.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      /*
+        Escape fires `cancel`. Preventing the default close and calling back up
+        means the parent's state is always what shuts the dialog — otherwise the
+        browser closes it while the parent still believes it is open, and the
+        next open() would be a no-op.
+      */
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      onClick={(event) => {
+        // The dialog box itself is a child; a click landing on the element is
+        // therefore a click on the backdrop around it.
+        if (event.target === ref.current) onCancel();
+      }}
+      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-border bg-surface p-0 text-text shadow-xl"
+    >
+      <div className="p-5">
+        <h2 id={titleId} className="font-semibold">
+          {title}
+        </h2>
+        {body ? <p className="mt-1.5 text-sm text-muted">{body}</p> : null}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" autoFocus onClick={onCancel} className={`${BTN_SECONDARY} text-sm`}>
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} className={`${BTN_DANGER} text-sm`}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
 
 /** Segmented pill used for ranges, themes and quick dates. */
 export function Segment({

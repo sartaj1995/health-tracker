@@ -3,8 +3,16 @@
  * service worker has to do is make sure the shell still loads without a
  * connection. Bump CACHE when you want every client to drop its old copies.
  */
-const CACHE = "health-tracker-v1";
-const SHELL = ["/", "/add", "/history", "/settings", "/manifest.webmanifest", "/icon.svg"];
+const CACHE = "health-tracker-v2";
+const SHELL = [
+  "/",
+  "/add",
+  "/history",
+  "/import",
+  "/settings",
+  "/manifest.webmanifest",
+  "/icon.svg",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

@@ -180,6 +180,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 20,
     max: 500,
+    recheckDays: 180,
     bands: [
       { to: 70, level: "warn", label: "Low" },
       { to: 100, level: "good", label: "Normal" },
@@ -198,6 +199,7 @@ export const METRICS: Metric[] = [
     step: 0.1,
     min: 3,
     max: 20,
+    recheckDays: 180,
     bands: [
       { to: 5.7, level: "good", label: "Normal" },
       { to: 6.5, level: "warn", label: "Prediabetic range" },
@@ -217,6 +219,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 50,
     max: 500,
+    recheckDays: 365,
     bands: [
       { to: 200, level: "good", label: "Desirable" },
       { to: 240, level: "warn", label: "Borderline high" },
@@ -233,6 +236,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 20,
     max: 400,
+    recheckDays: 365,
     bands: [
       { to: 100, level: "good", label: "Optimal" },
       { to: 130, level: "good", label: "Near optimal" },
@@ -252,6 +256,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 10,
     max: 150,
+    recheckDays: 365,
     bands: [
       { to: 40, level: "bad", label: "Low" },
       { to: 60, level: "warn", label: "Acceptable" },
@@ -269,6 +274,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 20,
     max: 1000,
+    recheckDays: 365,
     bands: [
       { to: 150, level: "good", label: "Normal" },
       { to: 200, level: "warn", label: "Borderline high" },
@@ -286,6 +292,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 1,
     max: 200,
+    recheckDays: 365,
     bands: [
       { to: 30, level: "good", label: "Normal" },
       { to: 40, level: "warn", label: "Borderline high" },
@@ -305,6 +312,7 @@ export const METRICS: Metric[] = [
     step: 0.1,
     min: 1,
     max: 200,
+    recheckDays: 180,
     bands: [
       { to: 20, level: "bad", label: "Deficient" },
       { to: 30, level: "warn", label: "Insufficient" },
@@ -323,6 +331,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 50,
     max: 2000,
+    recheckDays: 365,
     bands: [
       { to: 200, level: "bad", label: "Deficient" },
       { to: 300, level: "warn", label: "Borderline" },
@@ -340,6 +349,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 1,
     max: 1000,
+    recheckDays: 365,
     bands: [
       { to: 30, level: "bad", label: "Low iron stores" },
       { to: 300, level: "good", label: "Normal" },
@@ -357,6 +367,7 @@ export const METRICS: Metric[] = [
     step: 0.1,
     min: 3,
     max: 25,
+    recheckDays: 365,
     bands: [
       { to: 13, level: "bad", label: "Low" },
       { to: 17.5, level: "good", label: "Normal" },
@@ -376,6 +387,7 @@ export const METRICS: Metric[] = [
     step: 0.01,
     min: 0,
     max: 100,
+    recheckDays: 365,
     bands: [
       { to: 0.4, level: "bad", label: "Low (overactive)" },
       { to: 4, level: "good", label: "Normal" },
@@ -395,6 +407,7 @@ export const METRICS: Metric[] = [
     step: 0.01,
     min: 0.1,
     max: 15,
+    recheckDays: 365,
     bands: [
       { to: 0.6, level: "warn", label: "Low" },
       { to: 1.3, level: "good", label: "Normal" },
@@ -412,6 +425,7 @@ export const METRICS: Metric[] = [
     step: 0.1,
     min: 0.5,
     max: 20,
+    recheckDays: 365,
     bands: [
       { to: 3.5, level: "warn", label: "Low" },
       { to: 7, level: "good", label: "Normal" },
@@ -428,6 +442,7 @@ export const METRICS: Metric[] = [
     step: 1,
     min: 1,
     max: 500,
+    recheckDays: 365,
     bands: [
       { to: 40, level: "good", label: "Normal" },
       { to: 80, level: "warn", label: "Mildly elevated" },

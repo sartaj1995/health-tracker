@@ -5,6 +5,7 @@ import { DriveAutoBackup } from "@/components/DriveAutoBackup";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { ThemeSync } from "@/components/ThemeSync";
 import { StoreProvider } from "@/lib/store";
+import { THEME_COLORS } from "@/lib/theme";
 import "./globals.css";
 
 // Self-hosted at build time: no external request, no flash of unstyled text,
@@ -35,14 +36,13 @@ export const metadata: Metadata = {
   },
 };
 
+// theme-color is deliberately absent here: a `prefers-color-scheme` media
+// query follows the OS, and this app lets Settings override the OS. The tag is
+// written by the bootstrap below and kept current by <ThemeSync>.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f7f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f14" },
-  ],
 };
 
 /**
@@ -57,6 +57,10 @@ const themeBootstrap = `
     var dark = mode === "dark" ||
       (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     if (dark) document.documentElement.classList.add("dark");
+    var meta = document.createElement("meta");
+    meta.name = "theme-color";
+    meta.content = dark ? "${THEME_COLORS.dark}" : "${THEME_COLORS.light}";
+    document.head.appendChild(meta);
   } catch (e) {}
 })();
 `;
