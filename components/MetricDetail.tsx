@@ -9,6 +9,7 @@ import {
   BTN_PRIMARY,
   BTN_SECONDARY,
   Card,
+  ConfirmDialog,
   EmptyState,
   SectionTitle,
   Segment,
@@ -30,6 +31,7 @@ import {
   deltaSentiment,
   seriesFor,
   summarize,
+  type Point,
   type Range,
 } from "@/lib/stats";
 import { useStore } from "@/lib/store";
@@ -39,6 +41,8 @@ export function MetricDetail({ metricId }: { metricId: string }) {
   const [range, setRange] = useState<Range>("all");
   const [editingTarget, setEditingTarget] = useState(false);
   const [targetDraft, setTargetDraft] = useState("");
+  /** The reading the trash button is asking about; deleting cannot be undone. */
+  const [pendingDelete, setPendingDelete] = useState<Point | null>(null);
 
   const metric = getMetric(metricId);
   const allPoints = useMemo(
@@ -314,7 +318,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                         Edit
                       </Link>
                       <button
-                        onClick={() => deleteEntry(point.entryId!)}
+                        onClick={() => setPendingDelete(point)}
                         aria-label={`Delete reading from ${formatFullDate(point.date)}`}
                         className={`${BTN_ICON} hover:text-bad`}
                       >
@@ -330,6 +334,27 @@ export function MetricDetail({ metricId }: { metricId: string }) {
           </Card>
         </section>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this reading?"
+        body={
+          pendingDelete
+            ? `${metric.label} — ${formatReading(
+                metric,
+                pendingDelete.value,
+                pendingDelete.value2,
+              )}${metric.unit ? ` ${metric.unit}` : ""}, recorded on ${formatFullDate(
+                pendingDelete.date,
+              )}. This cannot be undone.`
+            : undefined
+        }
+        onConfirm={() => {
+          if (pendingDelete?.entryId) deleteEntry(pendingDelete.entryId);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </>
   );
 }

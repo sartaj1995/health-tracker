@@ -148,6 +148,16 @@ button:disabled {
     0 0 0 4px var(--accent-ring);
 }
 
+/*
+ * The scrim behind a modal <dialog>. ::backdrop only began inheriting custom
+ * properties from its originating element fairly recently, so the light value
+ * is repeated as a literal fallback for browsers that do not — a scrim that is
+ * slightly wrong in dark mode beats no scrim at all.
+ */
+dialog::backdrop {
+  background: var(--scrim, rgb(15 23 42 / 0.5));
+}
+
 /* Comfortable hit area without forcing the visual size to grow with it. */
 .tap {
   position: relative;

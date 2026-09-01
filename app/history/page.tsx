@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PencilIcon, TrashIcon } from "@/components/icons";
-import { BTN_ICON, BTN_PRIMARY, Card, EmptyState, StatusPill } from "@/components/ui";
+import {
+  BTN_ICON,
+  BTN_PRIMARY,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  StatusPill,
+} from "@/components/ui";
 import { formatFullDate, formatReading, relativeDate } from "@/lib/format";
 import { METRICS, bandsFor, classify, getMetric } from "@/lib/metrics";
 import { useStore } from "@/lib/store";
@@ -12,6 +19,9 @@ import type { Entry } from "@/lib/types";
 export default function HistoryPage() {
   const { entries, profile, deleteEntry, ready } = useStore();
   const [filter, setFilter] = useState("all");
+  // The reading the trash button is asking about. Deleting is one tap on a
+  // phone, next to Edit, and there is no undo — so it gets a question first.
+  const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
 
   const used = useMemo(() => {
     const ids = new Set(entries.map((e) => e.metricId));
@@ -126,7 +136,7 @@ export default function HistoryPage() {
                           <PencilIcon />
                         </Link>
                         <button
-                          onClick={() => deleteEntry(entry.id)}
+                          onClick={() => setPendingDelete(entry)}
                           aria-label={`Delete ${metric.label} reading from ${formatFullDate(entry.date)}`}
                           className={`${BTN_ICON} hover:text-bad`}
                         >
@@ -141,6 +151,28 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this reading?"
+        body={pendingDelete ? describeEntry(pendingDelete) : undefined}
+        onConfirm={() => {
+          if (pendingDelete) deleteEntry(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </>
   );
+}
+
+/** Names the exact reading being deleted, so the dialog is not a generic scare. */
+function describeEntry(entry: Entry): string {
+  const metric = getMetric(entry.metricId);
+  const reading = metric
+    ? `${metric.label} — ${formatReading(metric, entry.value, entry.value2)}${
+        metric.unit ? ` ${metric.unit}` : ""
+      }`
+    : entry.metricId;
+  return `${reading}, recorded on ${formatFullDate(entry.date)}. This cannot be undone.`;
 }

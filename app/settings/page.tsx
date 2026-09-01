@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { DriveCard } from "@/components/DriveCard";
-import { BTN_SECONDARY, Card, SectionTitle, Segment } from "@/components/ui";
+import { BTN_DANGER, BTN_SECONDARY, Card, SectionTitle, Segment } from "@/components/ui";
 import { getMetric } from "@/lib/metrics";
 import { todayISO } from "@/lib/stats";
 import { parseSnapshot } from "@/lib/storage";
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                     setConfirmClear(false);
                     setMessage("All data deleted.");
                   }}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-bad px-4 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90"
+                  className={`${BTN_DANGER} text-sm`}
                 >
                   Yes, delete everything
                 </button>
