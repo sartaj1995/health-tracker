@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { inSentence } from "@/lib/format";
 import { parseLabReport, type ParsedRow } from "@/lib/labImport";
 import { ENTERABLE, bandsFor, classify, getMetric, metricsByCategory } from "@/lib/metrics";
+import { PdfTextError, textFromPdfFile } from "@/lib/pdfText";
 import { todayISO } from "@/lib/stats";
 import { useStore } from "@/lib/store";
 import {
@@ -28,6 +29,12 @@ export function LabImport() {
   const [unmatched, setUnmatched] = useState(0);
   const [saved, setSaved] = useState<number | null>(null);
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [reading, setReading] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+
   const chosen = drafts?.filter((d) => d.include) ?? [];
 
   /** Readings already on file for this date — importing again would duplicate. */
@@ -36,8 +43,9 @@ export function LabImport() {
     return ids;
   }, [entries, date]);
 
-  function handleParse() {
-    const result = parseLabReport(text);
+  /** Takes the text explicitly so a PDF can be parsed without waiting on state. */
+  function handleParse(source: string = text) {
+    const result = parseLabReport(source);
     setUnmatched(result.unmatched);
     setDate(result.date ?? todayISO());
     setDrafts(
@@ -50,6 +58,37 @@ export function LabImport() {
       })),
     );
     setSaved(null);
+  }
+
+  /**
+   * Read a picked PDF into the box below rather than straight into drafts: the
+   * extracted text is shown, so a bad read is visible and can be corrected by
+   * hand instead of silently producing nothing.
+   */
+  async function handleFile(file: File) {
+    const isPdf =
+      file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      setFileName(null);
+      setFileError("That is not a PDF. Paste the report text below instead.");
+      return;
+    }
+
+    setFileError(null);
+    setFileName(file.name);
+    setReading(true);
+    try {
+      const extracted = await textFromPdfFile(file);
+      setText(extracted);
+      handleParse(extracted);
+    } catch (error) {
+      setDrafts(null);
+      setFileError(
+        error instanceof PdfTextError ? error.message : "That PDF could not be read.",
+      );
+    } finally {
+      setReading(false);
+    }
   }
 
   function update(key: number, patch: Partial<Draft>) {
@@ -96,14 +135,67 @@ export function LabImport() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold tracking-tight">Import a lab report</h1>
       <p className="mt-1 max-w-prose text-sm text-muted">
-        Paste the text of a report and every reading it recognises is pulled out at once,
-        rather than typed in one at a time. Nothing is uploaded — the reading happens in
-        this browser.
+        Open the PDF your lab sent, or paste the text of one, and every reading it
+        recognises is pulled out at once rather than typed in one at a time. Nothing is
+        uploaded — the file is read here, in this browser.
       </p>
+
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) void handleFile(file);
+        }}
+        className={`mt-5 rounded-2xl border border-dashed px-4 py-6 text-center transition-colors duration-200 ${
+          dragging ? "border-accent bg-accent-soft" : "border-border"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={reading}
+          className={`${BTN_SECONDARY} disabled:opacity-50`}
+        >
+          {reading ? "Reading the PDF…" : "Choose a PDF report"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleFile(file);
+            // Cleared so picking the same file twice fires onChange again.
+            e.target.value = "";
+          }}
+        />
+        <p className="mt-2 text-xs text-muted">
+          <span className="hidden sm:inline">Or drop one here. </span>
+          {fileName && !fileError ? `Read from ${fileName}.` : "Nothing leaves this device."}
+        </p>
+      </div>
+
+      {fileError ? (
+        <p role="alert" aria-live="assertive" className="mt-3 max-w-prose text-sm text-bad">
+          {fileError}
+        </p>
+      ) : null}
 
       <div className="mt-5">
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Report text</span>
+          <span className="mb-1.5 block text-sm font-medium">
+            Report text
+            <span className="ml-2 font-normal text-muted">
+              filled in by a PDF, or paste it yourself
+            </span>
+          </span>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -114,7 +206,7 @@ export function LabImport() {
         </label>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
-            onClick={handleParse}
+            onClick={() => handleParse()}
             disabled={text.trim() === ""}
             className={`${BTN_PRIMARY} disabled:opacity-50`}
           >
@@ -125,6 +217,8 @@ export function LabImport() {
               onClick={() => {
                 setText("");
                 setDrafts(null);
+                setFileName(null);
+                setFileError(null);
               }}
               className={BTN_SECONDARY}
             >
@@ -141,8 +235,8 @@ export function LabImport() {
               title="Nothing recognised"
               body={
                 unmatched > 0
-                  ? `${unmatched} line${unmatched === 1 ? "" : "s"} had numbers but no metric name this app knows. Check the report pasted as text rather than an image, or add those readings by hand.`
-                  : "No lines looked like readings. Reports copied out of a PDF sometimes lose their layout — paste the text rather than a screenshot."
+                  ? `${unmatched} line${unmatched === 1 ? "" : "s"} had numbers but no metric name this app knows. Check the text above reads the way the report does, or add those readings by hand.`
+                  : "No lines looked like readings. Have a look at the text above — if it came out scrambled you can tidy it up, and if it is empty the report is likely a scan, which is a picture rather than text."
               }
             />
           </div>

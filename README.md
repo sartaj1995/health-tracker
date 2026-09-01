@@ -118,15 +118,17 @@ reading*.
 <tr>
 <td width="50%" valign="top">
 
-### Paste a whole lab report
+### Open a whole lab report
 
 A lipid panel is six trips through a form, which is where logging usually
-stops. Paste the report text instead and every reading it recognises comes out
-at once, with the collection date read off the page and odd units converted.
-You check the rows before anything is saved.
+stops. Open the PDF your lab emailed you instead — or paste the text, if you
+prefer — and every reading it recognises comes out at once, with the collection
+date read off the page and odd units converted. You check the rows before
+anything is saved.
 
-The parsing is plain code running in your browser — no model, no API call. A
-lab report is the most identifying thing here, and it never leaves the device.
+Both the PDF reading and the parsing are plain code running in your browser —
+no model, no API call, no upload. A lab report is the most identifying thing
+here, and it never leaves the device.
 
 </td>
 <td width="50%" valign="top">
@@ -228,6 +230,7 @@ Then open <http://localhost:3000>.
 ```bash
 npm run build && npm start   # production build
 npm test                     # the test suite
+npm run lint                 # eslint
 ```
 
 Node 18+ is all you need. No database to migrate, no `.env` to fill in, no API
@@ -235,7 +238,7 @@ keys — the app runs complete on a fresh clone.
 
 ### Tests
 
-146 tests over the pure logic, run with `npm test` and on every pull request.
+211 tests over the pure logic, run with `npm test` and on every pull request.
 
 They exist mainly for one reason: a wrong reference threshold does not crash
 anything. It quietly reports a reading as **Normal** when it is not, and there
