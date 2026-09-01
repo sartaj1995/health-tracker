@@ -5,7 +5,7 @@ import { getMetric } from "./metrics";
  *
  * Deliberately local and deterministic — a lab report is the most identifying
  * thing this app ever touches, and it never leaves the browser. That is
- * affordable because the problem is narrow: 26 known metrics, known units,
+ * affordable because the problem is narrow: 27 known metrics, known units,
  * known plausible ranges, and lab reports are laid out regularly. Anything the
  * parser gets wrong is corrected in the confirmation step before saving, so it
  * needs to be useful rather than perfect.
@@ -29,6 +29,22 @@ const ALIASES: Record<string, string[]> = {
   ldl: ["ldl cholesterol", "ldl - cholesterol", "low density lipoprotein", "ldl"],
   hdl: ["hdl cholesterol", "hdl - cholesterol", "high density lipoprotein", "hdl"],
   vldl: ["vldl cholesterol", "very low density lipoprotein", "vldl"],
+  /*
+   * The longer forms carrying "cholesterol" are here to win the longest-alias
+   * contest against plain "cholesterol" above: a line reading "Lp(a)
+   * cholesterol 45" would otherwise be saved as your total cholesterol.
+   */
+  lpa: [
+    "lipoprotein (a) cholesterol",
+    "lipoprotein(a) cholesterol",
+    "lp(a) cholesterol",
+    "lipoprotein (a)",
+    "lipoprotein(a)",
+    "lp (a)",
+    "lp(a)",
+    "lipoprotein a",
+    "lpa",
+  ],
   triglycerides: ["triglycerides", "triglyceride", "serum triglycerides"],
   hba1c: [
     "glycosylated haemoglobin",
@@ -84,6 +100,14 @@ const CONVERSIONS: Record<string, { unit: string; factor: number }[]> = {
   hdl: [{ unit: "mmol/l", factor: 38.67 }],
   vldl: [{ unit: "mmol/l", factor: 38.67 }],
   triglycerides: [{ unit: "mmol/l", factor: 88.57 }],
+  /*
+   * The one conversion here that is an estimate rather than arithmetic. The
+   * others are fixed molar masses; apo(a) has no single one, because the
+   * protein's length varies from person to person. 2.15 is the usual working
+   * factor and the confirmation step shows the original either way — but a
+   * converted Lp(a) is an approximation in a way a converted vitamin D is not.
+   */
+  lpa: [{ unit: "nmol/l", factor: 1 / 2.15 }],
   fastingGlucose: [{ unit: "mmol/l", factor: 18.016 }],
   hemoglobin: [{ unit: "g/l", factor: 0.1 }],
   ferritin: [{ unit: "ug/l", factor: 1 }, { unit: "µg/l", factor: 1 }],

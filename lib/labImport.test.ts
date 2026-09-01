@@ -76,6 +76,59 @@ describe("distinguishing similar names", () => {
   });
 });
 
+/**
+ * Lp(a) shares most of its name with three metrics already in the catalogue,
+ * and the word "lipoprotein" appears in all of them. Every case below is a way
+ * one reading could quietly be filed as another.
+ */
+describe("telling Lp(a) apart from its neighbours", () => {
+  it("reads the short and long spellings", () => {
+    expect(valueOf("Lp(a)                45    mg/dL   < 30", "lpa")).toBe(45);
+    expect(valueOf("Lipoprotein (a)      45    mg/dL", "lpa")).toBe(45);
+    expect(valueOf("Lipoprotein(a)       45    mg/dL", "lpa")).toBe(45);
+    expect(valueOf("LP (a)               45    mg/dL", "lpa")).toBe(45);
+  });
+
+  it("is not filed as total cholesterol when the line says cholesterol", () => {
+    // "cholesterol" is an alias of its own, and a longer one than "lp(a)".
+    const rows = parseLabReport("Lp(a) Cholesterol      45    mg/dL").rows;
+    expect(rows.map((r) => r.metricId)).toEqual(["lpa"]);
+  });
+
+  it("does not swallow LDL, HDL or VLDL written out in full", () => {
+    const text = `
+      Low Density Lipoprotein (LDL)     129   mg/dL
+      High Density Lipoprotein (HDL)     32   mg/dL
+      Very Low Density Lipoprotein       10   mg/dL
+    `;
+    expect(valueOf(text, "ldl")).toBe(129);
+    expect(valueOf(text, "hdl")).toBe(32);
+    expect(valueOf(text, "vldl")).toBe(10);
+    expect(parseLabReport(text).rows.find((r) => r.metricId === "lpa")).toBeUndefined();
+  });
+
+  it("is not confused with apolipoprotein A1", () => {
+    // A different test, commonly on the same panel, whose name contains
+    // "lipoprotein a" as a substring.
+    const result = parseLabReport("Apolipoprotein A1     120   mg/dL");
+    expect(result.rows.find((r) => r.metricId === "lpa")).toBeUndefined();
+  });
+
+  it("converts nmol/L to mg/dL and says that it did", () => {
+    const row = parseLabReport("Lp(a)   85   nmol/L   < 75").rows[0];
+    expect(row.metricId).toBe("lpa");
+    // 85 / 2.15, the usual working factor.
+    expect(row.value).toBeCloseTo(39.53, 1);
+    expect(row.converted).toEqual({ value: 85, unit: "nmol/l" });
+  });
+
+  it("leaves a value already in mg/dL alone", () => {
+    const row = parseLabReport("Lp(a)   85   mg/dL").rows[0];
+    expect(row.value).toBe(85);
+    expect(row.converted).toBeUndefined();
+  });
+});
+
 describe("layout variations", () => {
   it("handles a colon-separated layout", () => {
     expect(valueOf("Vitamin D (25-OH) : 41.9 ng/mL", "vitaminD")).toBe(41.9);
