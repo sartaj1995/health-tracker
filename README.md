@@ -14,14 +14,13 @@ readings live in your browser and go nowhere unless you tell them to.
 
 <br>
 
-![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js&logoColor=white)
-![React 19](https://img.shields.io/badge/React-19-087ea4?style=flat-square&logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)
-![Tailwind 4](https://img.shields.io/badge/Tailwind-4-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white)
+![Next.js v15](https://img.shields.io/badge/Next.js-v15-000000?style=flat-square&logo=next.js&logoColor=white)
+![React v19](https://img.shields.io/badge/React-v19-087ea4?style=flat-square&logo=react&logoColor=white)
+![TypeScript v5.9](https://img.shields.io/badge/TypeScript-v5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8?style=flat-square)
 ![No backend](https://img.shields.io/badge/backend-none-16a34a?style=flat-square)
 ![Vibe coded](https://img.shields.io/badge/vibe%20coded-with%20Claude%20Code-d97706?style=flat-square)
-![MIT licence](https://img.shields.io/badge/licence-MIT-64748b?style=flat-square)
 
 <br>
 
