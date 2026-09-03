@@ -113,6 +113,101 @@ export function clipToRange(points: Point[], range: Range): Point[] {
   return points.filter((p) => p.t >= min);
 }
 
+const DAY_MS = 86_400_000;
+
+/** The smoothing window. A week absorbs the day-of-week rhythm in weight. */
+export const SMOOTHING_DAYS = 7;
+
+/** Below this there is not enough to average; the mean would just be the line. */
+const MIN_POINTS_TO_SMOOTH = 8;
+
+/** Roughly twice a week. Sparser than this and each reading is its own event. */
+const MAX_MEDIAN_GAP_DAYS = 4;
+
+/**
+ * Is this logged often enough that smoothing tells you something?
+ *
+ * Smoothing exists to separate a trend from measurement noise, and only a
+ * frequently logged metric has any. A vitamin D drawn twice a year has no noise
+ * to remove — each reading *is* the signal, and a rolling mean through three
+ * points would invent a smooth curve where the honest picture is three dots.
+ *
+ * The median gap rather than the mean: one holiday in an otherwise daily series
+ * should not disqualify it, and a median shrugs that off where an average
+ * would not.
+ */
+export function isDenselyLogged(points: Point[]): boolean {
+  if (points.length < MIN_POINTS_TO_SMOOTH) return false;
+
+  const gaps: number[] = [];
+  for (let i = 1; i < points.length; i++) {
+    gaps.push((points[i].t - points[i - 1].t) / DAY_MS);
+  }
+  gaps.sort((a, b) => a - b);
+
+  const mid = Math.floor(gaps.length / 2);
+  const median =
+    gaps.length % 2 === 1 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
+
+  return median <= MAX_MEDIAN_GAP_DAYS;
+}
+
+export type SmoothedPoint = Point & { avg: number };
+
+/**
+ * A trailing mean over `days`, carried on each point as `avg`.
+ *
+ * Trailing rather than centred: a centred window would let tomorrow's weight
+ * change the line drawn at today, so the curve would keep rewriting its own
+ * past every time you logged. Trailing only ever looks backwards, which is what
+ * you were actually able to know at the time.
+ *
+ * The first points average over a partial window. That is the honest answer —
+ * there is nothing earlier to include — and it simply means the line starts
+ * hugging the readings before it settles.
+ */
+export function smooth(points: Point[], days = SMOOTHING_DAYS): SmoothedPoint[] {
+  const windowMs = days * DAY_MS;
+  const out: SmoothedPoint[] = [];
+  let start = 0;
+  let sum = 0;
+
+  for (let i = 0; i < points.length; i++) {
+    sum += points[i].value;
+    while (points[start].t < points[i].t - windowMs) {
+      sum -= points[start].value;
+      start += 1;
+    }
+    out.push({ ...points[i], avg: sum / (i - start + 1) });
+  }
+
+  return out;
+}
+
+export type WindowChange = { delta: number; days: number };
+
+/**
+ * How far the metric moved across the window on screen, and over how long.
+ *
+ * `summarize` only ever compares the last two readings, which answers "what
+ * happened since Tuesday" — rarely the question. "Down 18 mg/dL over five
+ * months" is the sentence someone actually wants from a chart.
+ *
+ * The span is measured off the readings themselves, not the range button: pick
+ * 1Y with four months of data and it says four months, because claiming a year
+ * of evidence you do not have is exactly the kind of quiet overstatement this
+ * chart is meant to avoid.
+ */
+export function windowChange(points: Point[]): WindowChange | null {
+  if (points.length < 2) return null;
+  const first = points[0];
+  const last = points[points.length - 1];
+  const days = Math.round((last.t - first.t) / DAY_MS);
+  // Everything logged on one day is a spread, not a change over time.
+  if (days === 0) return null;
+  return { delta: last.value - first.value, days };
+}
+
 export type Summary = {
   latest: Point;
   previous?: Point;

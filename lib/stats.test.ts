@@ -3,11 +3,15 @@ import { getMetric } from "./metrics";
 import {
   clipToRange,
   deltaSentiment,
+  isDenselyLogged,
   seriesFor,
+  smooth,
   summarize,
   toTime,
   todayISO,
   trackedMetricIds,
+  windowChange,
+  type Point,
 } from "./stats";
 import { DEFAULT_PROFILE, type Entry, type Profile } from "./types";
 
@@ -285,5 +289,118 @@ describe("trackedMetricIds", () => {
   it("ignores ids that are not in the catalogue", () => {
     const ids = trackedMetricIds([entry("nonsense", 1, "2026-01-01")], profile);
     expect(ids).not.toContain("nonsense");
+  });
+});
+
+/** A point on a given day. Dates are built from a day offset for readability. */
+function at(dayOffset: number, value: number): Point {
+  const d = new Date(2026, 0, 1 + dayOffset);
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { date: iso, t: toTime(iso), value };
+}
+
+/** `count` readings one day apart, values supplied by a function of the index. */
+function daily(count: number, value: (i: number) => number): Point[] {
+  return Array.from({ length: count }, (_, i) => at(i, value(i)));
+}
+
+describe("deciding whether smoothing is worth it", () => {
+  it("smooths a metric logged daily", () => {
+    expect(isDenselyLogged(daily(30, (i) => 80 + (i % 3)))).toBe(true);
+  });
+
+  it("leaves a lab panel alone", () => {
+    // Four draws a year: each reading is the signal, not noise around one.
+    const draws = [at(0, 30), at(90, 34), at(180, 38), at(270, 41)];
+    expect(isDenselyLogged(draws)).toBe(false);
+  });
+
+  it("needs more than a handful of readings", () => {
+    // Consecutive days, but too few for an average to say anything.
+    expect(isDenselyLogged(daily(7, () => 80))).toBe(false);
+    expect(isDenselyLogged(daily(8, () => 80))).toBe(true);
+  });
+
+  it("is not thrown by one long gap in an otherwise daily series", () => {
+    // A fortnight away from home should not turn the smoothing off; this is
+    // why the gap test uses the median rather than the mean.
+    const points = [...daily(20, () => 80), at(34, 81), at(35, 81), at(36, 80)];
+    expect(isDenselyLogged(points)).toBe(true);
+  });
+
+  it("does not smooth a weekly weigh-in", () => {
+    const weekly = Array.from({ length: 12 }, (_, i) => at(i * 7, 80 + i));
+    expect(isDenselyLogged(weekly)).toBe(false);
+  });
+});
+
+describe("the rolling average", () => {
+  it("carries a trailing mean on every point", () => {
+    const avg = smooth([at(0, 10), at(1, 20), at(2, 30)], 7).map((p) => p.avg);
+    // Partial windows at the start: nothing earlier exists to include.
+    expect(avg).toEqual([10, 15, 20]);
+  });
+
+  it("only ever looks backwards", () => {
+    // A centred window would let a later reading change the line drawn at an
+    // earlier one, so the curve would rewrite its own past on every save.
+    const points = [at(0, 10), at(1, 10), at(2, 100)];
+    const avg = smooth(points, 7).map((p) => p.avg);
+    expect(avg[0]).toBe(10);
+    expect(avg[1]).toBe(10);
+  });
+
+  it("drops readings that fall out of the window", () => {
+    // Day 8 is more than seven days after day 0, so day 0 is no longer counted.
+    const points = [at(0, 100), at(8, 50), at(9, 50)];
+    expect(smooth(points, 7).map((p) => p.avg)).toEqual([100, 50, 50]);
+  });
+
+  it("flattens noise while following the trend", () => {
+    // A kilo of daily swing on a body that is genuinely losing weight.
+    const points = daily(28, (i) => 80 - i * 0.05 + (i % 2 === 0 ? 0.9 : -0.9));
+    const avg = smooth(points).map((p) => p.avg);
+    const swing = (xs: number[]) => Math.max(...xs) - Math.min(...xs);
+
+    const rawJumps = points.slice(1).map((p, i) => Math.abs(p.value - points[i].value));
+    const avgJumps = avg.slice(1).map((v, i) => Math.abs(v - avg[i]));
+    expect(Math.max(...avgJumps)).toBeLessThan(Math.max(...rawJumps));
+
+    // Still going down: smoothing must not flatten the signal along with it.
+    expect(avg[avg.length - 1]).toBeLessThan(avg[7]);
+    expect(swing(avg)).toBeLessThan(swing(points.map((p) => p.value)));
+  });
+
+  it("leaves every other field of the point intact", () => {
+    const [first] = smooth([{ ...at(0, 10), note: "fasting", entryId: "x" }]);
+    expect(first.note).toBe("fasting");
+    expect(first.entryId).toBe("x");
+  });
+});
+
+describe("change across the window", () => {
+  it("measures first to last, not the final step", () => {
+    // Ends level with where it started but wandered in between: the honest
+    // answer is "unchanged", which the last two readings would not give.
+    const change = windowChange([at(0, 100), at(30, 130), at(60, 100)]);
+    expect(change).toEqual({ delta: 0, days: 60 });
+  });
+
+  it("reports a fall as negative", () => {
+    expect(windowChange([at(0, 147), at(150, 129)])).toEqual({ delta: -18, days: 150 });
+  });
+
+  it("measures the span from the readings, not the range picked", () => {
+    // Four months of data inside a 1Y window is four months of evidence.
+    expect(windowChange([at(0, 10), at(120, 12)])?.days).toBe(120);
+  });
+
+  it("says nothing when there is nothing to compare", () => {
+    expect(windowChange([])).toBeNull();
+    expect(windowChange([at(0, 10)])).toBeNull();
+  });
+
+  it("says nothing when everything landed on one day", () => {
+    expect(windowChange([at(5, 10), at(5, 12)])).toBeNull();
   });
 });

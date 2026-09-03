@@ -20,6 +20,7 @@ import {
   formatDelta,
   formatFullDate,
   formatReading,
+  formatSpan,
   formatValue,
   inSentence,
   relativeDate,
@@ -27,10 +28,13 @@ import {
 import { bandsFor, classify, getMetric } from "@/lib/metrics";
 import {
   RANGES,
+  SMOOTHING_DAYS,
   clipToRange,
   deltaSentiment,
+  isDenselyLogged,
   seriesFor,
   summarize,
+  windowChange,
   type Point,
   type Range,
 } from "@/lib/stats";
@@ -73,6 +77,15 @@ export function MetricDetail({ metricId }: { metricId: string }) {
     : null;
   const target = profile.targets[metric.id];
   const pinned = profile.pinned.includes(metric.id);
+
+  // How far it moved across the window on screen, as opposed to since the last
+  // reading — the question a chart is usually being asked.
+  const change = windowChange(points);
+  const changeSentiment =
+    change && summary
+      ? deltaSentiment(metric, change.delta, target, summary.latest.value)
+      : null;
+  const smoothed = isDenselyLogged(points);
 
   function saveTarget() {
     const num = Number(targetDraft.replace(",", "."));
@@ -179,6 +192,36 @@ export function MetricDetail({ metricId }: { metricId: string }) {
               ))}
             </div>
             <MetricChart metric={metric} points={points} profile={profile} />
+
+            {change ? (
+              <p className="mt-3 text-center text-sm">
+                <span
+                  className="tnum font-medium"
+                  style={{
+                    color:
+                      changeSentiment === "good"
+                        ? "var(--good)"
+                        : changeSentiment === "bad"
+                          ? "var(--bad)"
+                          : "var(--text)",
+                  }}
+                >
+                  {change.delta === 0
+                    ? "Unchanged"
+                    : `${change.delta > 0 ? "Up" : "Down"} ${formatValue(
+                        metric,
+                        Math.abs(change.delta),
+                      )}${metric.unit ? ` ${metric.unit}` : ""}`}
+                </span>
+                <span className="text-muted"> over {formatSpan(change.days)}</span>
+              </p>
+            ) : null}
+
+            {smoothed ? (
+              <p className="mt-2 text-center text-xs text-muted">
+                Dots: each reading &middot; line: {SMOOTHING_DAYS}-day average
+              </p>
+            ) : null}
             {metric.secondary ? (
               <p className="mt-2 text-center text-xs text-muted">
                 Solid line: systolic &middot; dashed line: {inSentence(metric.secondary.label)}

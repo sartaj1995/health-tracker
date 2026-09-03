@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   daysAgo,
+  describeSeries,
   formatDelta,
   formatFullDate,
   formatReading,
+  formatSpan,
   formatValue,
   inSentence,
   relativeDate,
@@ -119,5 +121,60 @@ describe("daysAgo", () => {
   it("counts whole days", () => {
     expect(daysAgo(todayISO())).toBe(0);
     expect(daysAgo(shift(10))).toBe(10);
+  });
+});
+
+describe("formatSpan", () => {
+  it("says it in the unit a person would use", () => {
+    expect(formatSpan(1)).toBe("1 day");
+    expect(formatSpan(9)).toBe("9 days");
+    expect(formatSpan(21)).toBe("3 weeks");
+    expect(formatSpan(90)).toBe("3 months");
+    expect(formatSpan(365)).toBe("12 months");
+    expect(formatSpan(730)).toBe("2 years");
+  });
+
+  it("never leaves a span reading as a raw day count", () => {
+    // The point of it: "over 847 days" is not a sentence anyone says.
+    expect(formatSpan(847)).toBe("2 years");
+  });
+
+  it("keeps the unit singular when there is only one of it", () => {
+    expect(formatSpan(7)).toBe("7 days");
+    expect(formatSpan(31)).toBe("4 weeks");
+  });
+});
+
+describe("describeSeries", () => {
+  const vitaminD = getMetric("vitaminD")!;
+  const series = [
+    { date: "2026-01-10", value: 22 },
+    { date: "2026-05-02", value: 34.5 },
+    { date: "2026-09-03", value: 41.9 },
+  ];
+
+  it("summarises what the chart shows, with the status", () => {
+    const text = describeSeries(vitaminD, series, "Sufficient");
+    expect(text).toContain("Vitamin D over time: 3 readings");
+    expect(text).toContain("10 Jan 2026 to 3 Sep 2026");
+    expect(text).toContain("ranging 22.0 to 41.9 ng/mL");
+    expect(text).toContain("Latest 41.9 ng/mL, Sufficient.");
+  });
+
+  it("reads naturally for a single reading", () => {
+    const text = describeSeries(vitaminD, [series[0]], "Insufficient");
+    expect(text).toBe(
+      "Vitamin D over time: one reading, 22.0 ng/mL on 10 Jan 2026, Insufficient.",
+    );
+  });
+
+  it("copes with an unbanded metric that has no status", () => {
+    const weight = getMetric("weight")!;
+    const text = describeSeries(weight, [{ date: "2026-01-10", value: 80 }]);
+    expect(text).toBe("Weight over time: one reading, 80.0 kg on 10 Jan 2026.");
+  });
+
+  it("says so rather than describing nothing", () => {
+    expect(describeSeries(vitaminD, [])).toBe("Vitamin D: no readings yet.");
   });
 });
