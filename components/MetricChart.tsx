@@ -14,8 +14,8 @@ import {
   YAxis,
 } from "recharts";
 import { bandsFor, classify, goodRange } from "@/lib/metrics";
-import { formatDate, formatFullDate, formatValue } from "@/lib/format";
-import type { Point } from "@/lib/stats";
+import { describeSeries, formatDate, formatFullDate, formatValue } from "@/lib/format";
+import { SMOOTHING_DAYS, isDenselyLogged, smooth, type Point } from "@/lib/stats";
 import type { Metric, Profile } from "@/lib/types";
 import { levelColor } from "./ui";
 
@@ -62,7 +62,7 @@ function TooltipCard({
   metric,
 }: {
   active?: boolean;
-  payload?: { payload: Point }[];
+  payload?: { payload: Point & { avg?: number } }[];
   metric: Metric;
 }) {
   if (!active || !payload?.length) return null;
@@ -75,6 +75,13 @@ function TooltipCard({
         {point.value2 !== undefined ? `/${point.value2}` : ""}
         {metric.unit ? <span className="ml-1 font-normal text-muted">{metric.unit}</span> : null}
       </p>
+      {/* The reading is what you logged; the average is what the line is
+          drawing. Showing both stops the two disagreeing without explanation. */}
+      {point.avg !== undefined ? (
+        <p className="tnum mt-0.5 text-xs text-muted">
+          {SMOOTHING_DAYS}-day average {formatValue(metric, point.avg)}
+        </p>
+      ) : null}
       {point.note ? <p className="mt-1 max-w-[200px] text-xs text-muted">{point.note}</p> : null}
     </div>
   );
@@ -120,10 +127,35 @@ export function MetricChart({
   // markers rather than implying a line through them.
   const sparse = points.length < 4;
 
+  /*
+   * When a metric is logged often enough to be noisy, the rolling mean becomes
+   * the line you read and the raw readings drop back to a faint scatter behind
+   * it. Weighing yourself daily swings a kilo or two on water alone, and the
+   * raw line spends most of its length hiding the trend it exists to show.
+   *
+   * The status colour follows the mean rather than the readings, because the
+   * mean is now the claim the chart is making.
+   */
+  const smoothed = isDenselyLogged(points);
+  const data = smoothed ? smooth(points) : points;
+  // What the gradient sits under, and what the axis padding must contain.
+  const trendKey = smoothed ? "avg" : "value";
+
   return (
-    <div className="h-64 w-full">
+    <div
+      className="h-64 w-full"
+      role="img"
+      aria-label={describeSeries(metric, points, status?.label)}
+    >
+      {/* The SVG below is decorative once the label above says what it shows;
+          leaving it exposed only offers a screen reader a heap of unlabelled
+          shapes to walk through. */}
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+        <ComposedChart
+          data={data}
+          margin={{ top: 8, right: 8, bottom: 0, left: -12 }}
+          aria-hidden
+        >
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={stroke} stopOpacity={0.2} />
@@ -191,21 +223,42 @@ export function MetricChart({
 
           <Area
             type="monotone"
-            dataKey="value"
+            dataKey={trendKey}
             stroke="none"
             fill={`url(#${fillId})`}
             isAnimationActive={false}
             activeDot={false}
           />
+
+          {smoothed ? (
+            /* The readings themselves, demoted to the scatter they are. Dots
+               rather than a line: joining noise up implies the wobble means
+               something. */
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="none"
+              dot={{ r: 1.8, fill: stroke, fillOpacity: 0.45, strokeWidth: 0 }}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)" }}
+              isAnimationActive={false}
+            />
+          ) : null}
+
           <Line
             type="monotone"
-            dataKey="value"
+            dataKey={trendKey}
             stroke={stroke}
             strokeWidth={sparse ? 1.5 : 2.2}
             strokeDasharray={sparse ? "5 4" : undefined}
-            dot={sparse ? { r: 4, fill: stroke, strokeWidth: 0 } : { r: 2.5, fill: stroke, strokeWidth: 0 }}
+            dot={
+              smoothed
+                ? false
+                : sparse
+                  ? { r: 4, fill: stroke, strokeWidth: 0 }
+                  : { r: 2.5, fill: stroke, strokeWidth: 0 }
+            }
             /* 44px-equivalent grab area for touch, per the chart guidance. */
-            activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--surface)" }}
+            activeDot={smoothed ? false : { r: 6, strokeWidth: 2, stroke: "var(--surface)" }}
             isAnimationActive={false}
           />
           {metric.secondary ? (

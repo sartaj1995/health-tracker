@@ -81,3 +81,53 @@ export function relativeDate(iso: string): string {
 export function daysAgo(iso: string): number {
   return daysBetween(iso, todayISO());
 }
+
+/**
+ * A length of time in the unit a person would say it in: "9 days", "6 weeks",
+ * "5 months", "2 years". Used for the span a chart covers, where nobody wants
+ * to be told their weight fell over 847 days.
+ */
+export function formatSpan(days: number): string {
+  if (days < 14) return `${days} day${days === 1 ? "" : "s"}`;
+  if (days < 60) {
+    const weeks = Math.round(days / 7);
+    return `${weeks} week${weeks === 1 ? "" : "s"}`;
+  }
+  const months = Math.round(days / 30.44);
+  if (months < 24) return `${months} month${months === 1 ? "" : "s"}`;
+  const years = Math.round(days / 365.25);
+  return `${years} year${years === 1 ? "" : "s"}`;
+}
+
+/**
+ * What the chart would tell you if you could see it.
+ *
+ * A screen reader meets the chart as a pile of unlabelled SVG, so it gets this
+ * sentence instead. It deliberately summarises rather than listing every
+ * reading: the metric page already renders all of them as text further down,
+ * and repeating them here would mean hearing the same data twice.
+ */
+export function describeSeries(
+  metric: Metric,
+  points: { date: string; value: number }[],
+  statusLabel?: string,
+): string {
+  if (points.length === 0) return `${metric.label}: no readings yet.`;
+
+  const unit = metric.unit ? ` ${metric.unit}` : "";
+  const latest = points[points.length - 1];
+  const status = statusLabel ? `, ${statusLabel}` : "";
+
+  if (points.length === 1) {
+    return `${metric.label} over time: one reading, ${formatValue(metric, latest.value)}${unit} on ${formatFullDate(latest.date)}${status}.`;
+  }
+
+  const values = points.map((p) => p.value);
+  return (
+    `${metric.label} over time: ${points.length} readings from ` +
+    `${formatFullDate(points[0].date)} to ${formatFullDate(latest.date)}, ` +
+    `ranging ${formatValue(metric, Math.min(...values))} to ` +
+    `${formatValue(metric, Math.max(...values))}${unit}. ` +
+    `Latest ${formatValue(metric, latest.value)}${unit}${status}.`
+  );
+}
