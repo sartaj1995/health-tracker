@@ -25,7 +25,7 @@ import {
   inSentence,
   relativeDate,
 } from "@/lib/format";
-import { bandsFor, classify, getMetric } from "@/lib/metrics";
+import { bandsFor, classify, getMetric, secondaryBands } from "@/lib/metrics";
 import {
   RANGES,
   SMOOTHING_DAYS,
@@ -39,6 +39,7 @@ import {
   type Range,
 } from "@/lib/stats";
 import { useStore } from "@/lib/store";
+import type { Band } from "@/lib/types";
 
 export function MetricDetail({ metricId }: { metricId: string }) {
   const { entries, profile, updateProfile, deleteEntry, ready } = useStore();
@@ -71,7 +72,14 @@ export function MetricDetail({ metricId }: { metricId: string }) {
     return <div className="h-96 animate-pulse rounded-2xl bg-surface-2" />;
   }
 
+  // Each half of the reading answers for itself. A single pill drawn from the
+  // systolic called 110/100 "Normal", which is the whole reason this page
+  // exists — it is the page you open to find out whether a number is a problem.
   const status = summary ? classify(summary.latest.value, bands) : null;
+  const status2 =
+    summary && metric.secondary && summary.latest.value2 !== undefined
+      ? classify(summary.latest.value2, secondaryBands(metric))
+      : null;
   const sentiment = summary
     ? deltaSentiment(metric, summary.delta, profile.targets[metric.id], summary.latest.value)
     : null;
@@ -155,7 +163,24 @@ export function MetricDetail({ metricId }: { metricId: string }) {
               </span>
               {metric.unit ? <span className="text-lg text-muted">{metric.unit}</span> : null}
             </div>
-            {status ? <StatusPill level={status.level} label={status.label} size="md" /> : null}
+            {status ? (
+              <StatusPill
+                level={status.level}
+                label={
+                  metric.secondary
+                    ? `${metric.secondary.primaryLabel} ${inSentence(status.label)}`
+                    : status.label
+                }
+                size="md"
+              />
+            ) : null}
+            {status2 && metric.secondary ? (
+              <StatusPill
+                level={status2.level}
+                label={`${metric.secondary.label} ${inSentence(status2.label)}`}
+                size="md"
+              />
+            ) : null}
           </div>
 
           <p className="mt-1.5 flex items-center gap-2 text-sm text-muted">
@@ -224,7 +249,8 @@ export function MetricDetail({ metricId }: { metricId: string }) {
             ) : null}
             {metric.secondary ? (
               <p className="mt-2 text-center text-xs text-muted">
-                Solid line: systolic &middot; dashed line: {inSentence(metric.secondary.label)}
+                Solid line: {inSentence(metric.secondary.primaryLabel)} &middot; dashed line:{" "}
+                {inSentence(metric.secondary.label)}
               </p>
             ) : null}
             {points.length > 0 && points.length < 4 ? (
@@ -294,38 +320,24 @@ export function MetricDetail({ metricId }: { metricId: string }) {
       {bands?.length ? (
         <section className="mt-6">
           <SectionTitle>Reference ranges</SectionTitle>
+          {/* Two numbers, two ladders. Listing only the systolic one left the
+              diastolic reading with no published range to check itself against. */}
+          {metric.secondary ? <LadderTitle>{metric.secondary.primaryLabel}</LadderTitle> : null}
           <Card className="!p-0">
-            <ul className="divide-y divide-border">
-              {bands.map((band, i) => {
-                const from = i === 0 ? metric.min ?? 0 : bands[i - 1].to;
-                const active =
-                  summary != null && classify(summary.latest.value, bands)?.label === band.label;
-                return (
-                  <li
-                    key={band.label + i}
-                    className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
-                      active ? "bg-surface-2" : ""
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ background: levelColor(band.level) }}
-                      />
-                      {band.label}
-                    </span>
-                    <span className="tnum text-muted">
-                      {band.to === null
-                        ? `${from} and above`
-                        : i === 0
-                          ? `under ${band.to}`
-                          : `${from} – ${band.to}`}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <BandLadder bands={bands} min={metric.min} activeLabel={status?.label} />
           </Card>
+          {secondaryBands(metric)?.length ? (
+            <>
+              <LadderTitle>{metric.secondary!.label}</LadderTitle>
+              <Card className="!p-0">
+                <BandLadder
+                  bands={secondaryBands(metric)!}
+                  min={metric.min}
+                  activeLabel={status2?.label}
+                />
+              </Card>
+            </>
+          ) : null}
           <p className="mt-2 px-1 text-xs text-muted">
             General adult reference ranges, shown for context only. Your lab report and your doctor
             are the authority on what your numbers mean.
@@ -399,6 +411,55 @@ export function MetricDetail({ metricId }: { metricId: string }) {
         onCancel={() => setPendingDelete(null)}
       />
     </>
+  );
+}
+
+/** A heading naming which half of a reading a ladder belongs to. */
+function LadderTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="mb-1.5 mt-3 px-1 text-xs font-medium text-muted first:mt-0">{children}</h3>
+  );
+}
+
+/** One reference ladder, with the band the current reading falls in picked out. */
+function BandLadder({
+  bands,
+  min,
+  activeLabel,
+}: {
+  bands: Band[];
+  min?: number;
+  activeLabel?: string;
+}) {
+  return (
+    <ul className="divide-y divide-border">
+      {bands.map((band, i) => {
+        const from = i === 0 ? min ?? 0 : bands[i - 1].to;
+        return (
+          <li
+            key={band.label + i}
+            className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
+              band.label === activeLabel ? "bg-surface-2" : ""
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: levelColor(band.level) }}
+              />
+              {band.label}
+            </span>
+            <span className="tnum text-muted">
+              {band.to === null
+                ? `${from} and above`
+                : i === 0
+                  ? `under ${band.to}`
+                  : `${from} – ${band.to}`}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

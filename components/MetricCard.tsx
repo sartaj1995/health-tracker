@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { bandsFor, classify, getMetric } from "@/lib/metrics";
+import { classifyReading, getMetric } from "@/lib/metrics";
 import { formatDelta, formatReading, relativeDate } from "@/lib/format";
 import { deltaSentiment, summarize, type Point } from "@/lib/stats";
 import type { Profile } from "@/lib/types";
@@ -24,7 +24,7 @@ export function MetricCard({
   const summary = summarize(points);
   if (!metric || !summary) return null;
 
-  const status = classify(summary.latest.value, bandsFor(metric, profile));
+  const status = classifyReading(metric, summary.latest.value, summary.latest.value2, profile);
   const sentiment = deltaSentiment(
     metric,
     summary.delta,

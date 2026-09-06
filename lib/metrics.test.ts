@@ -5,10 +5,12 @@ import {
   METRICS,
   bandsFor,
   classify,
+  classifyReading,
   getMetric,
   goodRange,
+  secondaryBands,
 } from "./metrics";
-import { DEFAULT_PROFILE, type Metric, type Profile } from "./types";
+import { DEFAULT_PROFILE, type Band, type Metric, type Profile } from "./types";
 
 const profile: Profile = DEFAULT_PROFILE;
 const banded = METRICS.filter((m) => m.bands?.length);
@@ -266,5 +268,118 @@ describe("re-check windows", () => {
     // holds steady for life, so a repeat draw tells you nothing new. This test
     // exists to make that omission look deliberate rather than forgotten.
     expect(getMetric("lpa")?.recheckDays).toBeUndefined();
+  });
+});
+
+/**
+ * Blood pressure is two numbers and either one can be the problem. Reading only
+ * the systolic reported 110/100 as "Normal" — a diastolic well into stage 2,
+ * shown in green. The diastolic ladder sat in the catalogue from the first
+ * commit and nothing ever read it, which is exactly the sort of failure that
+ * looks like nothing at all.
+ */
+describe("classifying both halves of a reading", () => {
+  const bp = getMetric("bloodPressure")!;
+  const label = (sys: number, dia?: number) =>
+    classifyReading(bp, sys, dia, profile)?.label;
+
+  it("does not call a dangerous diastolic normal", () => {
+    // The reported case. Systolic is textbook; diastolic is stage 2.
+    expect(classify(110, bp.bands)?.label).toBe("Normal");
+    expect(label(110, 100)).toBe("Stage 2");
+  });
+
+  it("takes whichever half sits in the worse band", () => {
+    const cases: [number, number, string][] = [
+      [115, 75, "Normal"], // both fine
+      [110, 85, "Stage 1"], // diastolic alone is raised
+      [135, 75, "Stage 1"], // systolic alone is raised
+      [145, 85, "Stage 2"], // systolic worse than diastolic
+      [110, 100, "Stage 2"], // diastolic worse than systolic
+      [125, 75, "Elevated"], // systolic elevated, diastolic normal
+      [85, 55, "Low"], // both below range
+    ];
+    for (const [sys, dia, expected] of cases) {
+      expect(label(sys, dia), `${sys}/${dia}`).toBe(expected);
+    }
+  });
+
+  it("prefers the diastolic when both are merely warnings", () => {
+    // 125 is "Elevated" and 85 is "Stage 1" — both warn, but the diastolic
+    // ladder has no Elevated rung, so its warning is the more serious one.
+    expect(classify(125, bp.bands)?.label).toBe("Elevated");
+    expect(classify(85, secondaryBands(bp))?.label).toBe("Stage 1");
+    expect(label(125, 85)).toBe("Stage 1");
+  });
+
+  it("flags a reading whose systolic alone would have passed", () => {
+    // What the dashboard's "worth a closer look" list actually asks.
+    expect(classifyReading(bp, 110, 100, profile)?.level).toBe("bad");
+    expect(classifyReading(bp, 110, 85, profile)?.level).toBe("warn");
+    expect(classifyReading(bp, 115, 75, profile)?.level).toBe("good");
+  });
+
+  it("falls back to the first number when there is no second one", () => {
+    expect(label(150)).toBe("Stage 2");
+    expect(label(115)).toBe("Normal");
+  });
+
+  it("leaves single-number metrics exactly as they were", () => {
+    const ldl = getMetric("ldl")!;
+    for (const value of [90, 110, 140, 175, 200]) {
+      expect(classifyReading(ldl, value, undefined, profile)).toEqual(
+        classify(value, ldl.bands),
+      );
+    }
+  });
+
+  it("ignores a stray second number on a metric that takes only one", () => {
+    const ldl = getMetric("ldl")!;
+    expect(classifyReading(ldl, 90, 999, profile)?.label).toBe("Optimal");
+  });
+});
+
+describe("the second number's reference ladder", () => {
+  const ladders = METRICS.filter((m) => m.secondary?.bands?.length).map(
+    (m) => [m.label, m.secondary!.bands!] as [string, Band[]],
+  );
+
+  it("exists for every metric that captures a second number", () => {
+    // A secondary without bands is a number the app would never judge.
+    for (const metric of METRICS) {
+      if (metric.secondary) expect(metric.secondary.bands?.length).toBeTruthy();
+    }
+  });
+
+  it.each(ladders)("%s has a well-formed ladder", (_label, bands) => {
+    bands.forEach((band, i) => {
+      if (i < bands.length - 1) expect(band.to).not.toBeNull();
+    });
+    expect(bands[bands.length - 1].to).toBeNull();
+
+    const closed = bands.slice(0, -1).map((b) => b.to as number);
+    for (let i = 1; i < closed.length; i++) {
+      expect(closed[i]).toBeGreaterThan(closed[i - 1]);
+    }
+
+    const good = bands.map((b, i) => (b.level === "good" ? i : -1)).filter((i) => i >= 0);
+    expect(good.length).toBeGreaterThan(0);
+    expect(good[good.length - 1] - good[0] + 1).toBe(good.length);
+  });
+
+  it("pins the diastolic cutoffs", () => {
+    const dia = secondaryBands(getMetric("bloodPressure")!);
+    const at = (v: number) => classify(v, dia)?.label;
+    expect(at(59)).toBe("Low");
+    expect(at(60)).toBe("Normal");
+    expect(at(79)).toBe("Normal");
+    expect(at(80)).toBe("Stage 1");
+    expect(at(89)).toBe("Stage 1");
+    expect(at(90)).toBe("Stage 2");
+  });
+
+  it("is reachable through secondaryBands, and absent for everything else", () => {
+    expect(secondaryBands(getMetric("bloodPressure")!)).toHaveLength(4);
+    expect(secondaryBands(getMetric("weight")!)).toBeUndefined();
   });
 });

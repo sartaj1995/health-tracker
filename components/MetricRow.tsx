@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatReading } from "@/lib/format";
-import { bandsFor, classify, getMetric } from "@/lib/metrics";
+import { classifyReading, getMetric } from "@/lib/metrics";
 import { summarize, type Point } from "@/lib/stats";
 import type { Profile } from "@/lib/types";
 import { Sparkline } from "./Sparkline";
@@ -29,7 +29,7 @@ export function MetricRow({
   const summary = summarize(points);
   if (!metric || !summary) return null;
 
-  const status = classify(summary.latest.value, bandsFor(metric, profile));
+  const status = classifyReading(metric, summary.latest.value, summary.latest.value2, profile);
   const flagged = status !== null && status.level !== "good";
 
   return (

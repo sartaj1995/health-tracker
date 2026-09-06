@@ -31,8 +31,15 @@ export type Metric = {
   min?: number;
   max?: number;
   bands?: Band[];
-  /** Second number captured in the same entry, e.g. diastolic pressure. */
-  secondary?: { label: string; bands?: Band[] };
+  /**
+   * Second number captured in the same entry, e.g. diastolic pressure.
+   *
+   * `primaryLabel` names the *first* number, which only needs a name of its own
+   * once there are two of them — "Blood pressure" is the pair, "Systolic" is the
+   * number. It lives here so the form, the chart key and the spoken description
+   * cannot drift apart.
+   */
+  secondary?: { label: string; primaryLabel: string; bands?: Band[] };
   /** Computed from other metrics; not entered by hand. */
   derived?: boolean;
   /**

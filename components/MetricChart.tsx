@@ -13,7 +13,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { bandsFor, classify, goodRange } from "@/lib/metrics";
+import {
+  bandsFor,
+  classify,
+  classifyReading,
+  goodRange,
+  secondaryBands,
+} from "@/lib/metrics";
 import { describeSeries, formatDate, formatFullDate, formatValue } from "@/lib/format";
 import { SMOOTHING_DAYS, isDenselyLogged, smooth, type Point } from "@/lib/stats";
 import type { Metric, Profile } from "@/lib/types";
@@ -102,6 +108,14 @@ export function MetricChart({
 
   const bands = bandsFor(metric, profile);
   const good = goodRange(bands);
+  /*
+   * The second number gets its healthy window shaded too. Only the systolic
+   * band was drawn before, so the diastolic line was measured against a range
+   * that was never its own — a diastolic of 100 sat inside the green and read
+   * as fine. The two windows do not overlap (60–80 against 90–120), so they
+   * stack legibly rather than muddying each other.
+   */
+  const good2 = goodRange(secondaryBands(metric));
   const target = profile.targets[metric.id];
 
   const allValues = points.flatMap((p) =>
@@ -113,15 +127,25 @@ export function MetricChart({
   let hi = Math.max(...allValues);
   // Keep the healthy band visible even when every reading sits outside it,
   // otherwise the shading falls off the chart and the context is lost.
-  if (good) {
-    lo = Math.min(lo, good.from);
-    if (good.to !== null) hi = Math.max(hi, Math.min(good.to, hi * 1.35 + 1));
+  for (const window of [good, good2]) {
+    if (!window) continue;
+    lo = Math.min(lo, window.from);
+    if (window.to !== null) hi = Math.max(hi, Math.min(window.to, hi * 1.35 + 1));
   }
   const pad = (hi - lo || Math.max(hi * 0.1, 1)) * 0.15;
   const scale = niceScale(Math.max(metric.min ?? -Infinity, lo - pad), hi + pad);
   const domain = scale.domain;
 
-  const status = classify(points[points.length - 1].value, bands);
+  const latest = points[points.length - 1];
+  /*
+   * The line is coloured by its own number, not the pair. A red systolic line
+   * because the diastolic is high would be the original bug wearing the other
+   * shoe — the diastolic has its own dashed line and its own shaded band to say
+   * that. The spoken description below does take the pair, because there it is
+   * one sentence about one reading.
+   */
+  const status = classify(latest.value, bands);
+  const overall = classifyReading(metric, latest.value, latest.value2, profile);
   const stroke = status ? levelColor(status.level) : "var(--data)";
   // Below four readings there is no trend to read, so the points are shown as
   // markers rather than implying a line through them.
@@ -145,7 +169,7 @@ export function MetricChart({
     <div
       className="h-64 w-full"
       role="img"
-      aria-label={describeSeries(metric, points, status?.label)}
+      aria-label={describeSeries(metric, points, overall?.label)}
     >
       {/* The SVG below is decorative once the label above says what it shows;
           leaving it exposed only offers a screen reader a heap of unlabelled
@@ -168,6 +192,17 @@ export function MetricChart({
             <ReferenceArea
               y1={good.from}
               y2={good.to ?? domain[1]}
+              fill="var(--good)"
+              fillOpacity={0.08}
+              stroke="none"
+              ifOverflow="hidden"
+            />
+          ) : null}
+
+          {good2 ? (
+            <ReferenceArea
+              y1={good2.from}
+              y2={good2.to ?? domain[1]}
               fill="var(--good)"
               fillOpacity={0.08}
               stroke="none"
