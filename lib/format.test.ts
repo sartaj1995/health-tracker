@@ -178,3 +178,28 @@ describe("describeSeries", () => {
     expect(describeSeries(vitaminD, [])).toBe("Vitamin D: no readings yet.");
   });
 });
+
+describe("describeSeries for a two-number reading", () => {
+  const bp = getMetric("bloodPressure")!;
+  const readings = [
+    { date: "2026-08-01", value: 118, value2: 78 },
+    { date: "2026-09-06", value: 110, value2: 100 },
+  ];
+
+  it("speaks both numbers rather than describing one with the other's range", () => {
+    const text = describeSeries(bp, readings, "Stage 2");
+    expect(text).toContain("systolic ranging 110 to 118");
+    expect(text).toContain("diastolic 78 to 100 mmHg");
+  });
+
+  it("gives the latest reading as the pair, not half of it", () => {
+    // "Latest 110 mmHg" would be the spoken version of the original bug.
+    expect(describeSeries(bp, readings, "Stage 2")).toContain("Latest 110/100 mmHg, Stage 2.");
+  });
+
+  it("reads a single paired reading correctly", () => {
+    expect(describeSeries(bp, [readings[1]], "Stage 2")).toBe(
+      "Blood pressure over time: one reading, 110/100 mmHg on 6 Sep 2026, Stage 2.",
+    );
+  });
+});

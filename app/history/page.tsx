@@ -12,7 +12,7 @@ import {
   StatusPill,
 } from "@/components/ui";
 import { formatFullDate, formatReading, relativeDate } from "@/lib/format";
-import { METRICS, bandsFor, classify, getMetric } from "@/lib/metrics";
+import { METRICS, classifyReading, getMetric } from "@/lib/metrics";
 import { useStore } from "@/lib/store";
 import type { Entry } from "@/lib/types";
 
@@ -95,7 +95,7 @@ export default function HistoryPage() {
                   {rows.map((entry) => {
                     const metric = getMetric(entry.metricId);
                     if (!metric) return null;
-                    const status = classify(entry.value, bandsFor(metric, profile));
+                    const status = classifyReading(metric, entry.value, entry.value2, profile);
                     return (
                       <li key={entry.id} className="flex items-center gap-1 px-3 py-1.5">
                         {/*

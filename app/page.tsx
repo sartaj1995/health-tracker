@@ -7,7 +7,7 @@ import { MetricRow } from "@/components/MetricRow";
 import { PlusIcon } from "@/components/icons";
 import { BTN_PRIMARY, Card, EmptyState, SectionTitle, StatusPill } from "@/components/ui";
 import { daysAgo, formatReading, relativeDate } from "@/lib/format";
-import { CATEGORY_ORDER, METRICS, bandsFor, classify, getMetric } from "@/lib/metrics";
+import { CATEGORY_ORDER, METRICS, classifyReading, getMetric } from "@/lib/metrics";
 import { seriesFor, summarize, trackedMetricIds, type Point } from "@/lib/stats";
 import { useStore } from "@/lib/store";
 
@@ -66,7 +66,12 @@ export default function DashboardPage() {
         const metric = getMetric(id);
         const summary = summarize(points);
         if (!metric || !summary) return [];
-        const status = classify(summary.latest.value, bandsFor(metric, profile));
+        const status = classifyReading(
+          metric,
+          summary.latest.value,
+          summary.latest.value2,
+          profile,
+        );
         if (!status || status.level === "good") return [];
         return [{ metric, status, summary }];
       }),

@@ -9,6 +9,7 @@ import {
   classify,
   getMetric,
   metricsByCategory,
+  secondaryBands,
 } from "@/lib/metrics";
 import { formatFullDate, inSentence } from "@/lib/format";
 import { todayISO } from "@/lib/stats";
@@ -63,10 +64,22 @@ export function AddEntryForm() {
     return seen.map((id) => getMetric(id)).filter((m) => m && !m.derived);
   }, [entries]);
 
+  /*
+   * Each half of a reading is previewed against its own ladder. Judging the
+   * pair on the systolic alone called 110/100 "Normal" — the diastolic sat in
+   * stage 2 and the form said nothing, at the one moment you are looking
+   * straight at the number and could act on it.
+   */
   const parsed = Number(value.replace(",", "."));
   const preview =
     value.trim() !== "" && Number.isFinite(parsed)
       ? classify(parsed, bandsFor(metric, profile))
+      : null;
+
+  const parsed2 = Number(value2.replace(",", "."));
+  const preview2 =
+    metric.secondary && value2.trim() !== "" && Number.isFinite(parsed2)
+      ? classify(parsed2, secondaryBands(metric))
       : null;
 
   const lastValue = useMemo(() => {
@@ -187,7 +200,7 @@ export function AddEntryForm() {
         </Field>
 
         <Field
-          label={metric.secondary ? "Systolic" : "Value"}
+          label={metric.secondary ? metric.secondary.primaryLabel : "Value"}
           hint={metric.unit || undefined}
         >
           <div className="flex gap-2">
@@ -220,8 +233,25 @@ export function AddEntryForm() {
             ) : null}
           </div>
 
-          <div className="mt-2 flex min-h-6 items-center gap-2 text-xs text-muted">
-            {preview ? <StatusPill level={preview.level} label={preview.label} /> : null}
+          <div className="mt-2 flex min-h-6 flex-wrap items-center gap-2 text-xs text-muted">
+            {preview ? (
+              <StatusPill
+                level={preview.level}
+                label={
+                  /* Named once there are two of them, or a lone "Stage 1"
+                     leaves you guessing which number it is about. */
+                  metric.secondary
+                    ? `${metric.secondary.primaryLabel} ${inSentence(preview.label)}`
+                    : preview.label
+                }
+              />
+            ) : null}
+            {preview2 && metric.secondary ? (
+              <StatusPill
+                level={preview2.level}
+                label={`${metric.secondary.label} ${inSentence(preview2.label)}`}
+              />
+            ) : null}
             {lastValue ? (
               <span>
                 Last: {lastValue.value}

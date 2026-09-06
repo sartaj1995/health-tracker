@@ -109,7 +109,7 @@ export function formatSpan(days: number): string {
  */
 export function describeSeries(
   metric: Metric,
-  points: { date: string; value: number }[],
+  points: { date: string; value: number; value2?: number }[],
   statusLabel?: string,
 ): string {
   if (points.length === 0) return `${metric.label}: no readings yet.`;
@@ -117,17 +117,31 @@ export function describeSeries(
   const unit = metric.unit ? ` ${metric.unit}` : "";
   const latest = points[points.length - 1];
   const status = statusLabel ? `, ${statusLabel}` : "";
+  const reading = formatReading(metric, latest.value, latest.value2);
 
   if (points.length === 1) {
-    return `${metric.label} over time: one reading, ${formatValue(metric, latest.value)}${unit} on ${formatFullDate(latest.date)}${status}.`;
+    return `${metric.label} over time: one reading, ${reading}${unit} on ${formatFullDate(latest.date)}${status}.`;
   }
 
-  const values = points.map((p) => p.value);
+  const span = (pick: (p: (typeof points)[number]) => number | undefined) => {
+    const values = points.map(pick).filter((v): v is number => v !== undefined);
+    return values.length === 0
+      ? null
+      : `${formatValue(metric, Math.min(...values))} to ${formatValue(metric, Math.max(...values))}`;
+  };
+
+  // A chart of two lines needs both of their ranges spoken, or the second one
+  // is described by the first one's numbers.
+  const primary = span((p) => p.value);
+  const secondary = metric.secondary ? span((p) => p.value2) : null;
+  const ranges =
+    secondary === null
+      ? `ranging ${primary}${unit}`
+      : `${inSentence(metric.secondary!.primaryLabel)} ranging ${primary}, ${inSentence(metric.secondary!.label)} ${secondary}${unit}`;
+
   return (
     `${metric.label} over time: ${points.length} readings from ` +
     `${formatFullDate(points[0].date)} to ${formatFullDate(latest.date)}, ` +
-    `ranging ${formatValue(metric, Math.min(...values))} to ` +
-    `${formatValue(metric, Math.max(...values))}${unit}. ` +
-    `Latest ${formatValue(metric, latest.value)}${unit}${status}.`
+    `${ranges}. Latest ${reading}${unit}${status}.`
   );
 }

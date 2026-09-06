@@ -125,6 +125,7 @@ export const METRICS: Metric[] = [
     ],
     secondary: {
       label: "Diastolic",
+      primaryLabel: "Systolic",
       bands: [
         { to: 60, level: "warn", label: "Low" },
         { to: 80, level: "good", label: "Normal" },
@@ -563,6 +564,45 @@ export function classify(
     }
   }
   return null;
+}
+
+/** The reference ladder for the second number, where a metric captures one. */
+export function secondaryBands(metric: Metric): Band[] | undefined {
+  return metric.secondary?.bands;
+}
+
+const LEVEL_RANK: Record<Level, number> = { good: 0, warn: 1, bad: 2 };
+
+/**
+ * Classify a whole reading rather than half of one.
+ *
+ * Blood pressure is two numbers and either can be the one that is wrong.
+ * Judging it on the systolic alone reports 110/100 as **Normal** — a diastolic
+ * well into stage 2, coloured green, on a dashboard whose entire job is to
+ * surface exactly that. The diastolic ladder was in the catalogue from the
+ * start; nothing ever read it.
+ *
+ * Clinical practice puts a reading in the worse of the two categories, which is
+ * what this does. Ties go to the second number: the ladders share a vocabulary,
+ * but the diastolic one has no "Elevated" rung, so a diastolic that has reached
+ * a warning at all is already at stage 1 — the more serious of two warnings.
+ */
+export function classifyReading(
+  metric: Metric,
+  value: number,
+  value2: number | undefined,
+  profile: Profile,
+): { level: Level; label: string } | null {
+  const primary = classify(value, bandsFor(metric, profile));
+
+  const bands = secondaryBands(metric);
+  if (value2 === undefined || !bands) return primary;
+
+  const secondary = classify(value2, bands);
+  if (!secondary) return primary;
+  if (!primary) return secondary;
+
+  return LEVEL_RANK[secondary.level] >= LEVEL_RANK[primary.level] ? secondary : primary;
 }
 
 /** The healthy window, used to draw the shaded band behind a chart. */

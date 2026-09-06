@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { inSentence } from "@/lib/format";
 import { parseLabReport, type ParsedRow } from "@/lib/labImport";
-import { ENTERABLE, bandsFor, classify, getMetric, metricsByCategory } from "@/lib/metrics";
+import { ENTERABLE, classifyReading, getMetric, metricsByCategory } from "@/lib/metrics";
 import { PdfTextError, textFromPdfFile } from "@/lib/pdfText";
 import { todayISO } from "@/lib/stats";
 import { useStore } from "@/lib/store";
@@ -250,7 +250,7 @@ export function LabImport() {
               <ul className="divide-y divide-border">
                 {drafts.map((draft) => {
                   const metric = getMetric(draft.metricId)!;
-                  const status = classify(draft.value, bandsFor(metric, profile));
+                  const status = classifyReading(metric, draft.value, draft.value2, profile);
                   const already = existing.has(draft.metricId);
                   return (
                     <li key={draft.key} className="p-3">
