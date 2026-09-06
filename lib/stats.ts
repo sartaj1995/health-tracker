@@ -184,6 +184,50 @@ export function smooth(points: Point[], days = SMOOTHING_DAYS): SmoothedPoint[] 
   return out;
 }
 
+export type SeriesView = "combined" | "primary" | "secondary";
+
+/**
+ * Recast a two-number metric as one of its halves.
+ *
+ * Everything downstream — summarize, windowChange, the rolling average,
+ * classify, the chart, even the spoken description — reads `value` and the
+ * metric's own bands. Rewriting just those two things is therefore the whole
+ * feature: the systolic view is the metric minus its second number, and the
+ * diastolic view is the second number promoted into the first, carrying its own
+ * ladder with it.
+ *
+ * Doing it here rather than teaching each calculation about pairs is what stops
+ * "average" quietly meaning "average systolic" — there is no second code path
+ * left to forget about.
+ */
+export function asSeries(
+  metric: Metric,
+  points: Point[],
+  view: SeriesView,
+): { metric: Metric; points: Point[] } {
+  if (view === "combined" || !metric.secondary) return { metric, points };
+
+  if (view === "primary") {
+    return {
+      metric: { ...metric, label: metric.secondary.primaryLabel, secondary: undefined },
+      // Dropped so nothing downstream draws the line we are hiding.
+      points: points.map((p) => ({ ...p, value2: undefined })),
+    };
+  }
+
+  return {
+    metric: {
+      ...metric,
+      label: metric.secondary.label,
+      bands: metric.secondary.bands,
+      secondary: undefined,
+    },
+    points: points.flatMap((p) =>
+      p.value2 === undefined ? [] : [{ ...p, value: p.value2, value2: undefined }],
+    ),
+  };
+}
+
 export type WindowChange = { delta: number; days: number };
 
 /**

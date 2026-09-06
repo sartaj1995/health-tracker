@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMetric } from "./metrics";
 import {
+  asSeries,
   clipToRange,
   deltaSentiment,
   isDenselyLogged,
@@ -402,5 +403,81 @@ describe("change across the window", () => {
 
   it("says nothing when everything landed on one day", () => {
     expect(windowChange([at(5, 10), at(5, 12)])).toBeNull();
+  });
+});
+
+/**
+ * Splitting a two-number metric into its halves is what stops "average" quietly
+ * meaning "average systolic". Everything downstream reads `value` and the
+ * metric's bands, so recasting those two things has to be exactly right.
+ */
+describe("viewing one half of a paired metric", () => {
+  const bp = getMetric("bloodPressure")!;
+  const readings: Point[] = [
+    { ...at(0, 118), value2: 78 },
+    { ...at(6, 122), value2: 82 },
+    { ...at(12, 110), value2: 100 },
+  ];
+
+  it("leaves the combined view untouched", () => {
+    const { metric, points } = asSeries(bp, readings, "combined");
+    expect(metric).toBe(bp);
+    expect(points).toBe(readings);
+  });
+
+  it("keeps the first number and drops the second", () => {
+    const { metric, points } = asSeries(bp, readings, "primary");
+    expect(metric.label).toBe("Systolic");
+    expect(metric.secondary).toBeUndefined();
+    expect(points.map((p) => p.value)).toEqual([118, 122, 110]);
+    // Left in, the chart would still draw the line this view is hiding.
+    expect(points.every((p) => p.value2 === undefined)).toBe(true);
+  });
+
+  it("promotes the second number, carrying its own ladder with it", () => {
+    const { metric, points } = asSeries(bp, readings, "secondary");
+    expect(metric.label).toBe("Diastolic");
+    expect(metric.secondary).toBeUndefined();
+    expect(metric.bands).toBe(bp.secondary!.bands);
+    expect(points.map((p) => p.value)).toEqual([78, 82, 100]);
+  });
+
+  it("gives each half its own statistics", () => {
+    // The bug this exists to fix: one set of numbers for two lines.
+    const sys = summarize(asSeries(bp, readings, "primary").points)!;
+    const dia = summarize(asSeries(bp, readings, "secondary").points)!;
+
+    expect([sys.min, sys.max]).toEqual([110, 122]);
+    expect([dia.min, dia.max]).toEqual([78, 100]);
+    expect(dia.average).toBeCloseTo(86.67, 1);
+  });
+
+  it("gives each half its own movement across the window", () => {
+    // They move in opposite directions here, which one figure could not say.
+    expect(windowChange(asSeries(bp, readings, "primary").points)?.delta).toBe(-8);
+    expect(windowChange(asSeries(bp, readings, "secondary").points)?.delta).toBe(22);
+  });
+
+  it("carries the date and note through to the promoted number", () => {
+    const noted: Point[] = [{ ...at(0, 118), value2: 78, note: "after gym", entryId: "e1" }];
+    const [point] = asSeries(bp, noted, "secondary").points;
+    expect(point.date).toBe(noted[0].date);
+    expect(point.t).toBe(noted[0].t);
+    expect(point.note).toBe("after gym");
+    expect(point.entryId).toBe("e1");
+  });
+
+  it("skips readings with no second number rather than plotting a gap", () => {
+    const partial: Point[] = [{ ...at(0, 118), value2: 78 }, at(1, 120)];
+    expect(asSeries(bp, partial, "secondary").points).toHaveLength(1);
+  });
+
+  it("does nothing to a metric that only has one number", () => {
+    const ldl = getMetric("ldl")!;
+    const points = [at(0, 129)];
+    for (const view of ["primary", "secondary"] as const) {
+      expect(asSeries(ldl, points, view).metric).toBe(ldl);
+      expect(asSeries(ldl, points, view).points).toBe(points);
+    }
   });
 });
