@@ -5,7 +5,7 @@ import { getMetric } from "./metrics";
  *
  * Deliberately local and deterministic — a lab report is the most identifying
  * thing this app ever touches, and it never leaves the browser. That is
- * affordable because the problem is narrow: 27 known metrics, known units,
+ * affordable because the problem is narrow: 28 known metrics, known units,
  * known plausible ranges, and lab reports are laid out regularly. Anything the
  * parser gets wrong is corrected in the confirmation step before saving, so it
  * needs to be useful rather than perfect.
@@ -61,6 +61,27 @@ const ALIASES: Record<string, string[]> = {
     "glucose fasting",
     "fasting glucose",
     "fbs",
+  ],
+  /*
+   * Deliberately no bare "glucose", "blood sugar" or "pp". The first two would
+   * claim a random or unlabelled glucose and judge it against post-meal ranges,
+   * and two letters alone could be anything on a report. Every alias here names
+   * the timing, which is the one thing that makes a reading post-meal.
+   *
+   * Hyphens survive normalise(), so the spaced, hyphenated and one-word forms
+   * of "post prandial" are each listed rather than assumed.
+   */
+  postprandialGlucose: [
+    "post prandial",
+    "post-prandial",
+    "postprandial",
+    "blood sugar (pp)",
+    "blood sugar pp",
+    "pp blood sugar",
+    "glucose (pp)",
+    "glucose pp",
+    "pp glucose",
+    "ppbs",
   ],
   vitaminD: [
     "25-hydroxyvitamin d",
@@ -187,6 +208,25 @@ function numbersIn(text: string): number[] {
     .filter((n) => Number.isFinite(n));
 }
 
+/**
+ * A duration is never a result, so it is removed before the result is looked
+ * for. Glucose tests are defined by their timing and reports print it on the
+ * result line: "Fasting Blood Sugar (8-12 hrs) 95", "PPBS (2 Hrs) 142". Left
+ * in, the first number after the name is the 8 of the fasting window.
+ *
+ * The dangerous case is the one that looks fine. "Post Prandial (120 Min) 142"
+ * would save 120, an ordinary-looking glucose, with nothing flagged.
+ *
+ * Safe while no time-measured metric is read from reports. If sleep ever is,
+ * it needs exempting, or its own value would be stripped along with the rest.
+ */
+const DURATION =
+  /\b\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?\s*(?:hrs?|hours?|mins?|minutes?)\b/gi;
+
+function withoutDurations(text: string): string {
+  return text.replace(DURATION, " ");
+}
+
 function findUnit(line: string, metricId: string): { factor: number; unit: string } | null {
   for (const conversion of CONVERSIONS[metricId] ?? []) {
     if (line.includes(conversion.unit)) {
@@ -293,7 +333,7 @@ export function parseLabReport(text: string): ParseResult {
     // The result is the first number after the metric's name. Reference
     // ranges sit to the right of it on every layout I have seen.
     const afterName = line.slice(line.indexOf(match.alias) + match.alias.length);
-    const candidates = numbersIn(afterName);
+    const candidates = numbersIn(withoutDurations(afterName));
     if (candidates.length === 0) continue;
     let value = candidates[0];
 
