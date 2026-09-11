@@ -191,6 +191,32 @@ export const METRICS: Metric[] = [
     help: "After 8-12 hours without food.",
   },
   {
+    id: "postprandialGlucose",
+    label: "PP glucose",
+    unit: "mg/dL",
+    category: "Blood sugar",
+    direction: "down",
+    decimals: 0,
+    step: 1,
+    min: 20,
+    // Most home glucometers read up to 600 and show "HI" above it.
+    max: 600,
+    recheckDays: 180,
+    /*
+     * The 140 and 200 cutoffs come from the two-hour glucose tolerance test,
+     * which uses a standard 75 g glucose drink. A post-meal reading is not
+     * standardised the way that drink is, but Indian labs report PPBS against
+     * the same numbers — so these agree with what the report itself will say.
+     */
+    bands: [
+      { to: 70, level: "warn", label: "Low" },
+      { to: 140, level: "good", label: "Normal" },
+      { to: 200, level: "warn", label: "Prediabetic range" },
+      { to: null, level: "bad", label: "Diabetic range" },
+    ],
+    help: "Two hours after you start a meal. PP is short for post-prandial, meaning after a meal. Measured sooner, it reads higher than these ranges expect.",
+  },
+  {
     id: "hba1c",
     label: "HbA1c",
     unit: "%",

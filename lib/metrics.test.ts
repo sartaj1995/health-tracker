@@ -116,6 +116,15 @@ describe("classify boundary semantics", () => {
     ["lpa", 50, "High risk"],
     ["lpa", 90, "Very high risk"],
 
+    // Post-meal cutoffs sit higher than fasting ones: "normal" ends at 140 two
+    // hours after eating, against 100 on an empty stomach.
+    ["postprandialGlucose", 69, "Low"],
+    ["postprandialGlucose", 70, "Normal"],
+    ["postprandialGlucose", 139, "Normal"],
+    ["postprandialGlucose", 140, "Prediabetic range"],
+    ["postprandialGlucose", 199, "Prediabetic range"],
+    ["postprandialGlucose", 200, "Diabetic range"],
+
     // Vitamin D is the awkward one: healthy sits in the middle, and too much
     // is its own warning.
     ["vitaminD", 19.9, "Deficient"],
@@ -229,6 +238,8 @@ describe("catalogue integrity", () => {
 describe("re-check windows", () => {
   const expected: Record<string, number> = {
     fastingGlucose: 180,
+    // Drawn in the same sitting as fasting, so it goes stale on the same clock.
+    postprandialGlucose: 180,
     hba1c: 180,
     vitaminD: 180,
     totalCholesterol: 365,

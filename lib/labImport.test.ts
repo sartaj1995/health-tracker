@@ -324,3 +324,57 @@ describe("a full mixed report", () => {
     expect(result.date).toBe("2026-08-29");
   });
 });
+
+/**
+ * Glucose tests are defined by timing, so reports print the timing on the same
+ * line as the result — "(8-12 hrs)", "(2 Hrs)", "120 min". The parser takes the
+ * first number after the metric's name, which is the duration, not the result.
+ */
+describe("timing notes on a result line", () => {
+  it("does not read a fasting window as the result", () => {
+    expect(valueOf("Fasting Blood Sugar (8-12 hrs)   95   mg/dL", "fastingGlucose")).toBe(95);
+    expect(valueOf("Glucose Fasting (After 10 Hrs)   92   mg/dL", "fastingGlucose")).toBe(92);
+  });
+});
+
+/**
+ * Post-meal glucose sits one word away from fasting glucose on every report,
+ * and "glucose" or "blood sugar" alone could mean either, or a random test that
+ * is neither. These pin which lines it may claim.
+ */
+describe("post-meal (PP) glucose", () => {
+  const pp = (line: string) => valueOf(line, "postprandialGlucose");
+
+  it("reads the spellings labs print", () => {
+    expect(pp("PPBS                        142   mg/dL")).toBe(142);
+    expect(pp("Post Prandial Blood Sugar   142   mg/dL")).toBe(142);
+    expect(pp("Post-Prandial Blood Sugar   142   mg/dL")).toBe(142);
+    expect(pp("Glucose - Post Prandial     142   mg/dL")).toBe(142);
+    expect(pp("Blood Sugar (PP)            142   mg/dL")).toBe(142);
+  });
+
+  it("reads past the timing note to the result", () => {
+    // Without the duration guard the second line would save 120, which looks
+    // like an ordinary glucose and would never be flagged.
+    expect(pp("PPBS (2 Hrs)                      142   mg/dL")).toBe(142);
+    expect(pp("Glucose Post Prandial (120 Min)   142   mg/dL")).toBe(142);
+  });
+
+  it("leaves fasting glucose as fasting glucose", () => {
+    const text = `
+      Fasting Blood Sugar          95   mg/dL
+      Post Prandial Blood Sugar   142   mg/dL
+    `;
+    expect(valueOf(text, "fastingGlucose")).toBe(95);
+    expect(valueOf(text, "postprandialGlucose")).toBe(142);
+  });
+
+  it("does not claim a glucose that never says when it was taken", () => {
+    // A random test, or an unlabelled one. Filing either as post-meal would
+    // judge it against the wrong range.
+    for (const line of ["Glucose   110   mg/dL", "Random Blood Sugar   110   mg/dL"]) {
+      const rows = parseLabReport(line).rows;
+      expect(rows.find((r) => r.metricId === "postprandialGlucose")).toBeUndefined();
+    }
+  });
+});
