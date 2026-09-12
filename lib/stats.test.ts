@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getMetric } from "./metrics";
 import {
+  RANGES,
   asSeries,
   clipToRange,
   deltaSentiment,
@@ -229,6 +230,44 @@ describe("clipToRange", () => {
   it("drops readings older than the window", () => {
     expect(clipToRange(points, "3m").map((p) => p.value)).toEqual([3, 4]);
     expect(clipToRange(points, "1y").map((p) => p.value)).toEqual([2, 3, 4]);
+  });
+
+  it("reaches back years for the long windows", () => {
+    // Yearly lab draws, the case 3Y and 5Y exist for. The gaps are hundreds of
+    // days wide so a short month can never tip a reading across a boundary.
+    const yearly = seriesFor(
+      "ldl",
+      [
+        entry("ldl", 150, daysBefore(2200)), // about 6 years ago
+        entry("ldl", 140, daysBefore(1500)), // about 4 years ago
+        entry("ldl", 130, daysBefore(700)), // about 2 years ago
+        entry("ldl", 120, daysBefore(30)),
+      ],
+      profile,
+    );
+    expect(clipToRange(yearly, "1y").map((p) => p.value)).toEqual([120]);
+    expect(clipToRange(yearly, "3y").map((p) => p.value)).toEqual([130, 120]);
+    expect(clipToRange(yearly, "5y").map((p) => p.value)).toEqual([140, 130, 120]);
+    expect(clipToRange(yearly, "all")).toHaveLength(4);
+  });
+});
+
+describe("the chart's window buttons", () => {
+  it("run from shortest to longest, with All last", () => {
+    const months = RANGES.map((r) => r.months);
+    expect(months[months.length - 1]).toBeNull();
+    const finite = months.slice(0, -1) as number[];
+    for (let i = 1; i < finite.length; i++) {
+      expect(finite[i]).toBeGreaterThan(finite[i - 1]);
+    }
+  });
+
+  it("announce themselves in words, not button text", () => {
+    // Built from the label, a screen reader said "show the last All".
+    expect(RANGES.find((r) => r.key === "all")?.spoken).toBe("every reading");
+    for (const r of RANGES) {
+      expect(r.spoken, r.key).not.toContain(r.label);
+    }
   });
 });
 

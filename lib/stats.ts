@@ -95,13 +95,25 @@ export function trackedMetricIds(entries: Entry[], profile: Profile): string[] {
   return ids.filter((id) => getMetric(id));
 }
 
-export type Range = "3m" | "6m" | "1y" | "all";
+export type Range = "3m" | "6m" | "1y" | "3y" | "5y" | "all";
 
-export const RANGES: { key: Range; label: string; months: number | null }[] = [
-  { key: "3m", label: "3M", months: 3 },
-  { key: "6m", label: "6M", months: 6 },
-  { key: "1y", label: "1Y", months: 12 },
-  { key: "all", label: "All", months: null },
+/**
+ * The window buttons on a metric's chart, shortest first.
+ *
+ * The long ones are for the lab panels. A lipid profile drawn once a year is two
+ * dots across 1Y, and the question worth asking of it — is LDL drifting up over
+ * the years — only has an answer at 3Y and 5Y.
+ *
+ * `spoken` is what a screen reader announces. The button text alone read out as
+ * "show the last all", and "3M" is an abbreviation nobody says aloud.
+ */
+export const RANGES: { key: Range; label: string; spoken: string; months: number | null }[] = [
+  { key: "3m", label: "3M", spoken: "the last 3 months", months: 3 },
+  { key: "6m", label: "6M", spoken: "the last 6 months", months: 6 },
+  { key: "1y", label: "1Y", spoken: "the last year", months: 12 },
+  { key: "3y", label: "3Y", spoken: "the last 3 years", months: 36 },
+  { key: "5y", label: "5Y", spoken: "the last 5 years", months: 60 },
+  { key: "all", label: "All", spoken: "every reading", months: null },
 ];
 
 export function clipToRange(points: Point[], range: Range): Point[] {
