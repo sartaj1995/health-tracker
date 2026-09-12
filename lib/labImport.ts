@@ -5,7 +5,7 @@ import { getMetric } from "./metrics";
  *
  * Deliberately local and deterministic — a lab report is the most identifying
  * thing this app ever touches, and it never leaves the browser. That is
- * affordable because the problem is narrow: 28 known metrics, known units,
+ * affordable because the problem is narrow: 30 known metrics, known units,
  * known plausible ranges, and lab reports are laid out regularly. Anything the
  * parser gets wrong is corrected in the confirmation step before saving, so it
  * needs to be useful rather than perfect.
@@ -96,9 +96,18 @@ const ALIASES: Record<string, string[]> = {
   ferritin: ["serum ferritin", "ferritin"],
   hemoglobin: ["haemoglobin", "hemoglobin", "hgb", "hb"],
   tsh: ["thyroid stimulating hormone", "tsh"],
+  t3: ["total t3", "t3 total", "triiodothyronine", "t3"],
   creatinine: ["serum creatinine", "creatinine"],
   uricAcid: ["serum uric acid", "uric acid"],
   alt: ["alanine aminotransferase", "sgpt", "alt"],
+  psa: [
+    "prostate specific antigen",
+    "prostate-specific antigen",
+    "total psa",
+    "psa total",
+    "serum psa",
+    "psa",
+  ],
   restingHr: ["resting heart rate", "pulse rate", "heart rate", "pulse"],
   spo2: ["oxygen saturation", "spo2"],
   bloodPressure: ["blood pressure", "bp"],
@@ -130,6 +139,8 @@ const CONVERSIONS: Record<string, { unit: string; factor: number }[]> = {
    */
   lpa: [{ unit: "nmol/l", factor: 1 / 2.15 }],
   fastingGlucose: [{ unit: "mmol/l", factor: 18.016 }],
+  // Some labs print total T3 in ng/mL, a hundredth of the ng/dL stored here.
+  t3: [{ unit: "ng/ml", factor: 100 }],
   hemoglobin: [{ unit: "g/l", factor: 0.1 }],
   ferritin: [{ unit: "ug/l", factor: 1 }, { unit: "µg/l", factor: 1 }],
 };
@@ -152,6 +163,18 @@ export type ParseResult = {
   date?: string;
   /** Lines that held a number but matched no metric, as a rough "missed" count. */
   unmatched: number;
+};
+
+/**
+ * A line can name a test we know and still be a different measurement. Free T3
+ * and free PSA are separate assays, in their own units, against their own
+ * ranges. Free T3 at 3.1 pg/mL saved as a total T3 would at least look
+ * implausible; free PSA at 0.8 ng/mL saved as a total PSA looks entirely
+ * ordinary, and nothing downstream would think to question it.
+ */
+const DIFFERENT_TEST: Record<string, RegExp> = {
+  t3: /\bfree\b/,
+  psa: /\bfree\b|\bratio\b|%/,
 };
 
 /** Lines that are about the reference range rather than your result. */
@@ -309,6 +332,12 @@ export function parseLabReport(text: string): ParseResult {
       if (!isDateLine(line)) unmatched += 1;
       continue;
     }
+    // Named like a test we know, but measured as a different one.
+    if (DIFFERENT_TEST[match.metricId]?.test(line)) {
+      unmatched += 1;
+      continue;
+    }
+
     // One reading per metric: the first occurrence is the result, anything
     // after is usually the reference range repeated or a second panel.
     if (seen.has(match.metricId)) continue;
