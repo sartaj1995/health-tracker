@@ -237,7 +237,7 @@ keys — the app runs complete on a fresh clone.
 
 ### Tests
 
-304 tests over the pure logic, run with `npm test` and on every pull request.
+307 tests over the pure logic, run with `npm test` and on every pull request.
 
 They exist mainly for one reason: a wrong reference threshold does not crash
 anything. It quietly reports a reading as **Normal** when it is not, and there

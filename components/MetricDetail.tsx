@@ -297,7 +297,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                   key={r.key}
                   active={range === r.key}
                   onClick={() => setRange(r.key)}
-                  aria-label={`Show the last ${r.label}`}
+                  aria-label={`Show ${r.spoken}`}
                 >
                   {r.label}
                 </Segment>
