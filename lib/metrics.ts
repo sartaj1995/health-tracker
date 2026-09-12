@@ -447,6 +447,34 @@ export const METRICS: Metric[] = [
       { to: null, level: "bad", label: "Very high" },
     ],
   },
+  {
+    id: "t3",
+    label: "Total T3",
+    unit: "ng/dL",
+    category: "Thyroid",
+    direction: "neutral",
+    decimals: 0,
+    step: 1,
+    /*
+     * Free T3 is a different assay reported around 2-4 pg/mL. A floor of 10
+     * means one entered here by mistake is called implausible rather than
+     * saved as a very low total T3.
+     */
+    min: 10,
+    max: 1000,
+    recheckDays: 365,
+    /*
+     * Both ends warn rather than alarm. T3 is read next to TSH rather than on
+     * its own, and a T3 outside the range is a reason to look at the panel,
+     * not a finding by itself.
+     */
+    bands: [
+      { to: 80, level: "warn", label: "Low" },
+      { to: 200, level: "good", label: "Normal" },
+      { to: null, level: "warn", label: "High" },
+    ],
+    help: "Total T3, the one on a T3/T4/TSH panel. Free T3 (FT3) is a different test in different units and does not belong here. Reference ranges vary between labs, so your report's own range wins.",
+  },
 
   // ------------------------------------------------------ Organ function
   {
@@ -501,6 +529,28 @@ export const METRICS: Metric[] = [
       { to: null, level: "bad", label: "Elevated" },
     ],
     help: "A liver enzyme.",
+  },
+  {
+    id: "psa",
+    label: "PSA",
+    unit: "ng/mL",
+    category: "Organ function",
+    direction: "down",
+    decimals: 2,
+    step: 0.01,
+    min: 0,
+    /*
+     * Advanced disease reaches the hundreds. A tighter ceiling would refuse a
+     * real reading, which is worse than a weaker implausibility check.
+     */
+    max: 1000,
+    recheckDays: 365,
+    bands: [
+      { to: 4, level: "good", label: "Normal" },
+      { to: 10, level: "warn", label: "Borderline" },
+      { to: null, level: "bad", label: "High" },
+    ],
+    help: "A prostate marker. The usual cutoff is 4, but it drifts up with age — roughly 2.5 at 40 and 6.5 at 70 — so read it against your report's own range. Free PSA is a separate test and does not belong here.",
   },
 
   // ----------------------------------------------------------- Lifestyle

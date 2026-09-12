@@ -378,3 +378,77 @@ describe("post-meal (PP) glucose", () => {
     }
   });
 });
+
+/**
+ * Both of these sit next to a same-named test that is measured differently.
+ * Free PSA is the dangerous one: its values look like perfectly ordinary total
+ * PSA values, so nothing downstream would flag one saved by mistake.
+ */
+describe("PSA", () => {
+  const psa = (line: string) => valueOf(line, "psa");
+
+  it("reads the spellings labs print", () => {
+    expect(psa("PSA                               1.24   ng/mL")).toBe(1.24);
+    expect(psa("Total PSA                         1.24   ng/mL")).toBe(1.24);
+    expect(psa("Serum PSA                         1.24   ng/mL")).toBe(1.24);
+    expect(psa("Prostate Specific Antigen         1.24   ng/mL")).toBe(1.24);
+    expect(psa("Prostate-Specific Antigen (PSA)   1.24   ng/mL")).toBe(1.24);
+  });
+
+  it("refuses free PSA and the ratio, which are different tests", () => {
+    const lines = [
+      "Free PSA               0.80   ng/mL",
+      "PSA, Free              0.80   ng/mL",
+      "% Free PSA            18",
+      "Free:Total PSA Ratio   0.18",
+    ];
+    for (const line of lines) {
+      const result = parseLabReport(line);
+      expect(result.rows.find((r) => r.metricId === "psa"), line).toBeUndefined();
+      // Counted as missed rather than silently dropped.
+      expect(result.unmatched, line).toBe(1);
+    }
+  });
+});
+
+describe("total T3", () => {
+  const t3 = (line: string) => valueOf(line, "t3");
+
+  it("reads the spellings labs print", () => {
+    expect(t3("T3                  120   ng/dL")).toBe(120);
+    expect(t3("Total T3            120   ng/dL")).toBe(120);
+    expect(t3("Triiodothyronine    120   ng/dL")).toBe(120);
+  });
+
+  it("converts ng/mL to ng/dL and says that it did", () => {
+    const row = parseLabReport("T3   1.2   ng/mL").rows[0];
+    expect(row.metricId).toBe("t3");
+    expect(row.value).toBe(120);
+    expect(row.converted).toEqual({ value: 1.2, unit: "ng/ml" });
+  });
+
+  it("refuses free T3, which is measured in different units", () => {
+    const lines = [
+      "Free T3                 3.1   pg/mL",
+      "T3, Free                3.1   pg/mL",
+      "Free Triiodothyronine   3.1   pg/mL",
+    ];
+    for (const line of lines) {
+      expect(parseLabReport(line).rows.find((r) => r.metricId === "t3"), line).toBeUndefined();
+    }
+  });
+
+  it("never matches inside FT3 in the first place", () => {
+    // The alias is word-bounded, so the f of ft3 blocks it before any rule does.
+    expect(parseLabReport("FT3   3.1   pg/mL").rows).toEqual([]);
+  });
+
+  it("leaves TSH alone on the same panel", () => {
+    const text = `
+      T3     120   ng/dL
+      TSH    2.6   uIU/mL
+    `;
+    expect(valueOf(text, "t3")).toBe(120);
+    expect(valueOf(text, "tsh")).toBe(2.6);
+  });
+});

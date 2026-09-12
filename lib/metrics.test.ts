@@ -125,6 +125,20 @@ describe("classify boundary semantics", () => {
     ["postprandialGlucose", 199, "Prediabetic range"],
     ["postprandialGlucose", 200, "Diabetic range"],
 
+    // 4 is the familiar PSA cutoff and 4-10 the grey zone where a result
+    // is followed up rather than acted on.
+    ["psa", 3.99, "Normal"],
+    ["psa", 4, "Borderline"],
+    ["psa", 9.99, "Borderline"],
+    ["psa", 10, "High"],
+
+    // Total T3 in ng/dL. Free T3 would be a single-digit pg/mL number and
+    // has no business being classified against these at all.
+    ["t3", 79, "Low"],
+    ["t3", 80, "Normal"],
+    ["t3", 199, "Normal"],
+    ["t3", 200, "High"],
+
     // Vitamin D is the awkward one: healthy sits in the middle, and too much
     // is its own warning.
     ["vitaminD", 19.9, "Deficient"],
@@ -251,9 +265,11 @@ describe("re-check windows", () => {
     ferritin: 365,
     hemoglobin: 365,
     tsh: 365,
+    t3: 365,
     creatinine: 365,
     uricAcid: 365,
     alt: 365,
+    psa: 365,
   };
 
   it.each(Object.entries(expected))("re-checks %s after %i days", (id, days) => {
