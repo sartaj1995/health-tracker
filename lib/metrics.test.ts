@@ -226,11 +226,18 @@ describe("catalogue integrity", () => {
     }
   });
 
-  it("keeps derived metrics out of the entry form", () => {
+  it("keeps derived and retired metrics out of the entry form", () => {
     // BMI is computed from weight and height; offering it in the picker would
-    // let you record a BMI that contradicts them.
+    // let you record a BMI that contradicts them. Height lives in Settings.
     expect(ENTERABLE.some((m) => m.id === "bmi")).toBe(false);
-    expect(ENTERABLE.every((m) => !m.derived)).toBe(true);
+    expect(ENTERABLE.some((m) => m.id === "height")).toBe(false);
+    expect(ENTERABLE.every((m) => !m.derived && !m.retired)).toBe(true);
+  });
+
+  it("retires height rather than deleting it", () => {
+    // Deleting the definition would orphan every height reading already saved:
+    // History could no longer name them, so nobody could clear them out.
+    expect(getMetric("height")?.retired).toBe(true);
   });
 
   it("gives every metric a sane min/max window", () => {

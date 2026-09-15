@@ -76,10 +76,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updatedAt: now,
     };
     setEntries((prev) => [...prev, entry]);
-    // Height doubles as a profile field so BMI works from day one.
-    if (input.metricId === "height") {
-      setProfile((p) => ({ ...p, heightCm: input.value }));
-    }
     return entry;
   }, []);
 

@@ -8,6 +8,7 @@ import {
   bandsFor,
   classify,
   getMetric,
+  isLoggable,
   metricsByCategory,
   secondaryBands,
 } from "@/lib/metrics";
@@ -61,7 +62,7 @@ export function AddEntryForm() {
       if (!seen.includes(e.metricId)) seen.push(e.metricId);
       if (seen.length === 6) break;
     }
-    return seen.map((id) => getMetric(id)).filter((m) => m && !m.derived);
+    return seen.map((id) => getMetric(id)).filter((m) => m && isLoggable(m));
   }, [entries]);
 
   /*

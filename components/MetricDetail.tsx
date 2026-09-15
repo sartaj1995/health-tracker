@@ -25,7 +25,7 @@ import {
   inSentence,
   relativeDate,
 } from "@/lib/format";
-import { bandsFor, classify, getMetric, secondaryBands } from "@/lib/metrics";
+import { bandsFor, classify, getMetric, isLoggable, secondaryBands } from "@/lib/metrics";
 import {
   RANGES,
   SMOOTHING_DAYS,
@@ -141,6 +141,9 @@ export function MetricDetail({ metricId }: { metricId: string }) {
         )
       : null;
   const smoothed = isDenselyLogged(points);
+  // BMI can be missing a weight or missing a height, and only the second is
+  // fixed from Settings rather than from the add form.
+  const needsHeight = Boolean(metric.derived) && profile.heightCm === undefined;
 
   function saveTarget() {
     const num = Number(targetDraft.replace(",", "."));
@@ -170,7 +173,7 @@ export function MetricDetail({ metricId }: { metricId: string }) {
           <Segment active={pinned} onClick={togglePin}>
             {pinned ? "Pinned" : "Pin to top"}
           </Segment>
-          {!metric.derived ? (
+          {isLoggable(metric) ? (
             <Link href={`/add?metric=${metric.id}`} className={`${BTN_PRIMARY} text-sm`}>
               <PlusIcon className="h-4 w-4" />
               Add
@@ -212,17 +215,28 @@ export function MetricDetail({ metricId }: { metricId: string }) {
           <EmptyState
             title={`No ${inSentence(metric.label)} readings yet`}
             body={
-              metric.derived
-                ? "BMI appears once you have logged both a height and a weight."
-                : "Add your first reading and the chart will build itself from there."
+              metric.retired
+                ? "Your height is set in Settings now, so there is nothing to log here."
+                : needsHeight
+                  ? "BMI appears once your height is set in Settings and you have logged a weight."
+                  : metric.derived
+                    ? "BMI appears once you have logged a weight."
+                    : "Add your first reading and the chart will build itself from there."
             }
             action={
-              !metric.derived ? (
-                <Link href={`/add?metric=${metric.id}`} className={BTN_PRIMARY}>
-                  <PlusIcon className="h-4 w-4" />
-                  Add a reading
+              metric.retired || needsHeight ? (
+                <Link href="/settings" className={BTN_PRIMARY}>
+                  {needsHeight ? "Set your height" : "Open Settings"}
                 </Link>
-              ) : null
+              ) : (
+                <Link
+                  href={`/add?metric=${metric.derived ? "weight" : metric.id}`}
+                  className={BTN_PRIMARY}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  {metric.derived ? "Add a weight" : "Add a reading"}
+                </Link>
+              )
             }
           />
         </div>
@@ -498,12 +512,17 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                   </div>
                   {!metric.derived && point.entryId ? (
                     <>
-                      <Link
-                        href={`/add?edit=${point.entryId}`}
-                        className="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-surface-2"
-                      >
-                        Edit
-                      </Link>
+                      {/* A retired metric's readings can be deleted but not
+                          edited: the add form no longer offers the metric, so
+                          an edit would open on a picker that cannot show it. */}
+                      {metric.retired ? null : (
+                        <Link
+                          href={`/add?edit=${point.entryId}`}
+                          className="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-medium text-accent transition-colors duration-200 hover:bg-surface-2"
+                        >
+                          Edit
+                        </Link>
+                      )}
                       <button
                         onClick={() => setPendingDelete(point)}
                         aria-label={`Delete reading from ${formatFullDate(point.date)}`}

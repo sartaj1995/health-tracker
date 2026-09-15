@@ -5,7 +5,7 @@ import { getMetric } from "./metrics";
  *
  * Deliberately local and deterministic — a lab report is the most identifying
  * thing this app ever touches, and it never leaves the browser. That is
- * affordable because the problem is narrow: 30 known metrics, known units,
+ * affordable because the problem is narrow: 29 known metrics, known units,
  * known plausible ranges, and lab reports are laid out regularly. Anything the
  * parser gets wrong is corrected in the confirmation step before saving, so it
  * needs to be useful rather than perfect.
@@ -112,7 +112,6 @@ const ALIASES: Record<string, string[]> = {
   spo2: ["oxygen saturation", "spo2"],
   bloodPressure: ["blood pressure", "bp"],
   weight: ["body weight", "weight"],
-  height: ["height"],
   bodyFat: ["body fat percentage", "body fat"],
   waist: ["waist circumference", "waist"],
 };

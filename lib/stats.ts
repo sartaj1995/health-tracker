@@ -27,36 +27,29 @@ const byDateAsc = (a: { date: string }, b: { date: string }) =>
   a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
 
 /**
- * BMI has no entries of its own - it is derived from every weight reading and
- * whichever height was on record at the time.
+ * BMI has no entries of its own - it is worked out from every weight reading
+ * and the one height in Settings.
+ *
+ * One height, applied to the whole history. That gives something up on
+ * purpose: height used to be a dated series, so re-measuring left earlier BMIs
+ * alone. But once any height reading existed, Settings was ignored entirely,
+ * and the height you could see and edit was not the height in use. For adults
+ * one value is the honest model, and a change recalculating the past is the
+ * price of there being one height instead of two that can disagree.
+ *
+ * Built on the weight series rather than raw entries, so two weigh-ins on one
+ * day make one BMI point: the same point the weight chart shows.
  */
 function bmiSeries(entries: Entry[], profile: Profile): Point[] {
-  const heights = entries
-    .filter((e) => e.metricId === "height")
-    .sort(byDateAsc);
-  const weights = entries
-    .filter((e) => e.metricId === "weight")
-    .sort(byDateAsc);
-
-  const points: Point[] = [];
-  for (const w of weights) {
-    let cm: number | undefined;
-    for (const h of heights) {
-      if (h.date <= w.date) cm = h.value;
-      else break;
-    }
-    // Before the first height reading, fall back to the profile height.
-    cm ??= profile.heightCm ?? heights[0]?.value;
-    if (!cm || cm <= 0) continue;
-    const m = cm / 100;
-    points.push({
-      date: w.date,
-      t: toTime(w.date),
-      value: Math.round((w.value / (m * m)) * 10) / 10,
-      entryId: w.id,
-    });
-  }
-  return points;
+  const cm = profile.heightCm;
+  if (!cm || cm <= 0) return [];
+  const m = cm / 100;
+  return seriesFor("weight", entries, profile).map((w) => ({
+    date: w.date,
+    t: w.t,
+    value: Math.round((w.value / (m * m)) * 10) / 10,
+    entryId: w.entryId,
+  }));
 }
 
 /** All readings for one metric, oldest first, one point per day. */
@@ -89,10 +82,14 @@ export function seriesFor(
 /** Metric ids that have at least one reading, in catalog order. */
 export function trackedMetricIds(entries: Entry[], profile: Profile): string[] {
   const present = new Set(entries.map((e) => e.metricId));
-  const ids = [...present];
-  const hasHeight = present.has("height") || profile.heightCm !== undefined;
-  if (present.has("weight") && hasHeight) ids.push("bmi");
-  return ids.filter((id) => getMetric(id));
+  const ids = [...present].filter((id) => {
+    const metric = getMetric(id);
+    // A retired metric keeps its old readings in History, but it is no longer
+    // something the dashboard tracks.
+    return metric !== undefined && !metric.retired;
+  });
+  if (present.has("weight") && profile.heightCm !== undefined) ids.push("bmi");
+  return ids;
 }
 
 export type Range = "3m" | "6m" | "1y" | "3y" | "5y" | "all";

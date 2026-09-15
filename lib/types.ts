@@ -43,6 +43,11 @@ export type Metric = {
   /** Computed from other metrics; not entered by hand. */
   derived?: boolean;
   /**
+   * No longer logged as a reading. The definition stays so that readings saved
+   * before it was retired still show in History, where they can be deleted.
+   */
+  retired?: boolean;
+  /**
    * How long a reading stays current, in days. Set on the lab panels worth
    * repeating; the dashboard nudges once the newest reading is older than this.
    * Absent means a metric you log as often as you like — weight, steps, sleep.
