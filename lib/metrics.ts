@@ -55,7 +55,13 @@ export const METRICS: Metric[] = [
     step: 0.5,
     min: 100,
     max: 250,
-    help: "Set once. Used together with weight to work out your BMI.",
+    /*
+     * Height is one value in Settings now. As a metric it kept dated readings,
+     * and once any existed BMI stopped reading Settings at all — so the height
+     * you could see and edit was not the height being used.
+     */
+    retired: true,
+    help: "Your height is set in Settings now, where it works out your BMI. Readings logged here before stay in your history.",
   },
   {
     id: "bmi",
@@ -67,7 +73,7 @@ export const METRICS: Metric[] = [
     step: 0.1,
     derived: true,
     bands: BMI_ASIAN,
-    help: "Calculated from each weight reading and your height - nothing to enter.",
+    help: "Calculated from each weight reading and the height in Settings - nothing to enter.",
   },
   {
     id: "bodyFat",
@@ -611,8 +617,13 @@ export function getMetric(id: string): Metric | undefined {
   return BY_ID.get(id);
 }
 
+/** Whether new readings of a metric can be entered. */
+export function isLoggable(metric: Metric): boolean {
+  return !metric.derived && !metric.retired;
+}
+
 /** Metrics you can actually type a number into. */
-export const ENTERABLE = METRICS.filter((m) => !m.derived);
+export const ENTERABLE = METRICS.filter(isLoggable);
 
 export function metricsByCategory(list: Metric[] = METRICS) {
   return CATEGORY_ORDER.map((category) => ({

@@ -31,10 +31,10 @@ export const localRepo: HealthRepo = {
   async load() {
     const entries = readJSON<Entry[]>(ENTRIES_KEY, []);
     const profile = readJSON<Profile>(PROFILE_KEY, DEFAULT_PROFILE);
-    return {
+    return migrateHeight({
       entries: Array.isArray(entries) ? entries : [],
       profile: { ...DEFAULT_PROFILE, ...profile },
-    };
+    });
   },
 
   async save({ entries, profile }) {
@@ -84,7 +84,37 @@ export function parseSnapshot(text: string): Snapshot {
       ? { ...DEFAULT_PROFILE, ...(doc.profile as Profile) }
       : DEFAULT_PROFILE;
 
-  return { entries, profile };
+  return migrateHeight({ entries, profile });
+}
+
+/**
+ * Height used to be a metric with dated readings; it is one value in Settings
+ * now. Anyone whose height only ever lived in a reading — a backup assembled by
+ * hand, a Settings field cleared afterwards — would otherwise lose their BMI
+ * without a word, so an old reading is carried across on the way in.
+ *
+ * Runs on every load and every restore, so it has to be harmless the second
+ * time. The readings themselves are left alone: they stay in History and can
+ * be deleted there, rather than being erased on load and that loss riding out
+ * to Drive with the next backup.
+ */
+export function migrateHeight(snapshot: Snapshot): Snapshot {
+  const readings = snapshot.entries.filter((e) => e.metricId === "height");
+  if (readings.length === 0) return snapshot;
+
+  // Settings is the height the person can see and edit, so a reading that
+  // disagrees with it never overrules it. Only an empty Settings is filled —
+  // which also makes a second run on the next load a no-op.
+  if (snapshot.profile.heightCm !== undefined) return snapshot;
+
+  // The latest measurement by the day it was taken, not the day it was typed
+  // in: back-filling an old height must not make it the one that wins. Two
+  // readings on one day go to the later edit, the same rule the charts use.
+  const latest = readings.reduce((best, e) =>
+    e.date > best.date || (e.date === best.date && e.updatedAt > best.updatedAt) ? e : best,
+  );
+
+  return { ...snapshot, profile: { ...snapshot.profile, heightCm: latest.value } };
 }
 
 export function newId(): string {

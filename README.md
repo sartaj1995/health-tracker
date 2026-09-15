@@ -55,9 +55,9 @@ knows the reference range for each one — so `34.1 ng/mL` shows up as
 <tr>
 <td width="50%" valign="top">
 
-### 30 metrics, ready to use
+### 29 metrics, ready to use
 
-Weight, height, body fat, waist, blood pressure, resting heart rate, SpO₂,
+Weight, body fat, waist, blood pressure, resting heart rate, SpO₂,
 fasting and PP glucose, HbA1c, the full lipid panel including VLDL and Lp(a), vitamin D, B12,
 ferritin, hemoglobin, TSH and T3, creatinine, uric acid, ALT, PSA, sleep, steps, water.
 
@@ -79,9 +79,9 @@ chart, so you read a word rather than look up a number.
 
 ### BMI is calculated, never typed
 
-Every weight reading is paired with whichever height was on record *on that
-date* — so the BMI history is honest even if your height was measured
-mid-series. WHO cutoffs or the lower South-Asian ones, your choice.
+Set your height once in Settings and every weight reading becomes a BMI. One
+height, so there is never a question of which one was used. WHO cutoffs or the
+lower South-Asian ones, your choice.
 
 </td>
 <td width="50%" valign="top">
@@ -188,9 +188,9 @@ Screen**. It becomes an app: own icon, full screen, works on the Underground.
 **3. Deploy your own.** Below. Two minutes, free tier, and then the URL is
 yours rather than mine.
 
-> **First run tip.** Log your **height** once — it is what turns every future
-> weight reading into a BMI. Then pin the three or four metrics you actually
-> care about; the dashboard reorganises itself around them.
+> **First run tip.** Set your **height** in Settings once — it is what turns
+> every weight reading into a BMI. Then pin the three or four metrics you
+> actually care about; the dashboard reorganises itself around them.
 
 <br>
 
@@ -237,7 +237,7 @@ keys — the app runs complete on a fresh clone.
 
 ### Tests
 
-307 tests over the pure logic, run with `npm test` and on every pull request.
+317 tests over the pure logic, run with `npm test` and on every pull request.
 
 They exist mainly for one reason: a wrong reference threshold does not crash
 anything. It quietly reports a reading as **Normal** when it is not, and there
@@ -246,10 +246,10 @@ test — HbA1c flipping to *Prediabetic range* at exactly 5.7, LDL to *Near
 optimal* at 100, BMI to *Overweight* at 23 on South-Asian cutoffs and 25 on WHO.
 Change a cutoff and a test goes red naming the one you moved.
 
-The rest covers the logic that is easy to get subtly wrong: BMI pairing each
-weight with the height that was on record *on that date*, dates anchored at
-local midday so a timezone can never shift a reading a day, and backup parsing
-dropping unreadable rows without failing an otherwise good restore.
+The rest covers the logic that is easy to get subtly wrong: BMI drawing on one
+height and one weigh-in per day, dates anchored at local midday so a timezone
+can never shift a reading a day, and backup parsing dropping unreadable rows
+without failing an otherwise good restore.
 
 <br>
 
@@ -344,9 +344,6 @@ branch per change, one pull request each, reviewed before merge.
 
 The details I would have got wrong, or never thought about, in a weekend project:
 
-- **BMI is paired with the height on record at the time of each weight
-  reading**, not today's height. The naive version quietly rewrites your entire
-  BMI history the day you re-measure yourself.
 - **Dates are parsed at local midday**, so a timezone shift can never slide a
   reading into the previous day. There is a one-line comment in
   [`lib/stats.ts`](lib/stats.ts) explaining exactly that.
@@ -372,6 +369,11 @@ The details I would have got wrong, or never thought about, in a weekend project
   against, rather than "make it look better". The skills it used are committed
   in [`.claude/skills/`](.claude/skills) so the visual language is reproducible
   rather than a lucky roll.
+- It stored height as a dated series, so re-measuring could never rewrite an old
+  BMI. Careful work, and wrong for the people using it: adult height barely
+  moves, and once any height reading existed the height in Settings was
+  silently ignored, so the value you could see was not the value in use. Height
+  is one number in Settings now.
 
 ### If you want to build one
 
@@ -415,7 +417,7 @@ backend.
 
 | Path | What lives there |
 |:--|:--|
-| [`lib/metrics.ts`](lib/metrics.ts) | All 30 metrics and their reference bands — the heart of the app |
+| [`lib/metrics.ts`](lib/metrics.ts) | All 29 metrics and their reference bands — the heart of the app |
 | [`lib/types.ts`](lib/types.ts) | `Metric`, `Band`, `Entry`, `Profile` |
 | [`lib/stats.ts`](lib/stats.ts) | Series building, derived BMI, summaries |
 | [`lib/storage.ts`](lib/storage.ts) | The `HealthRepo` seam and its `localStorage` implementation |

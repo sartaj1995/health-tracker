@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newId, parseSnapshot } from "./storage";
+import { migrateHeight, newId, parseSnapshot } from "./storage";
 import { DEFAULT_PROFILE } from "./types";
 
 const reading = {
@@ -92,5 +92,77 @@ describe("newId", () => {
   it("does not collide across a large batch", () => {
     const ids = new Set(Array.from({ length: 2000 }, () => newId()));
     expect(ids.size).toBe(2000);
+  });
+});
+
+/**
+ * Height moved from dated readings to one value in Settings. The migration only
+ * has to make sure nobody's BMI quietly disappears on the way — without
+ * deleting anything, and without doing harm when it runs again on the next load.
+ */
+describe("carrying height over from its old readings", () => {
+  const height = (value: number, date: string) => ({
+    ...reading,
+    id: `height-${date}`,
+    metricId: "height",
+    value,
+    date,
+    createdAt: `${date}T00:00:00.000Z`,
+    updatedAt: `${date}T00:00:00.000Z`,
+  });
+
+  it("leaves a snapshot with no height readings untouched", () => {
+    const snapshot = { entries: [reading], profile: DEFAULT_PROFILE };
+    expect(migrateHeight(snapshot)).toBe(snapshot);
+  });
+
+  it("fills an empty Settings height from the readings", () => {
+    const migrated = migrateHeight({
+      entries: [height(170, "2024-01-10"), reading],
+      profile: DEFAULT_PROFILE,
+    });
+    expect(migrated.profile.heightCm).toBe(170);
+  });
+
+  it("takes the latest measurement, not the latest thing typed in", () => {
+    // Back-filling an old height after a newer one must not let the old one win.
+    const backfilled = {
+      ...height(172, "2020-03-01"),
+      createdAt: "2026-09-01T00:00:00.000Z",
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    };
+    const measuredLater = height(170, "2025-06-01");
+    const migrated = migrateHeight({
+      entries: [measuredLater, backfilled],
+      profile: DEFAULT_PROFILE,
+    });
+    expect(migrated.profile.heightCm).toBe(170);
+  });
+
+  it("keeps a height already set in Settings", () => {
+    // Settings is the value the person can see and edit, so a reading that
+    // disagrees with it does not get to overrule it.
+    const migrated = migrateHeight({
+      entries: [height(170, "2025-06-01")],
+      profile: { ...DEFAULT_PROFILE, heightCm: 175 },
+    });
+    expect(migrated.profile.heightCm).toBe(175);
+  });
+
+  it("does not delete the readings", () => {
+    const entries = [height(170, "2024-01-10"), reading];
+    expect(migrateHeight({ entries, profile: DEFAULT_PROFILE }).entries).toBe(entries);
+  });
+
+  it("is harmless when it runs again on the next load", () => {
+    const once = migrateHeight({ entries: [height(170, "2024-01-10")], profile: DEFAULT_PROFILE });
+    expect(migrateHeight(once)).toEqual(once);
+  });
+
+  it("also applies to a backup restored from a file or Drive", () => {
+    const snapshot = parseSnapshot(
+      JSON.stringify({ entries: [height(170, "2024-01-10")], profile: DEFAULT_PROFILE }),
+    );
+    expect(snapshot.profile.heightCm).toBe(170);
   });
 });

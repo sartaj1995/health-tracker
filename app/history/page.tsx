@@ -128,13 +128,19 @@ export default function HistoryPage() {
                             </span>
                           ) : null}
                         </Link>
-                        <Link
-                          href={`/add?edit=${entry.id}`}
-                          aria-label={`Edit ${metric.label} reading from ${formatFullDate(entry.date)}`}
-                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-medium text-accent transition-colors duration-200 hover:bg-surface-2"
-                        >
-                          <PencilIcon />
-                        </Link>
+                        {/* Retired readings can be deleted but not edited. The
+                            spacer keeps this row's value in line with the rest. */}
+                        {metric.retired ? (
+                          <span aria-hidden className="h-11 w-11 shrink-0" />
+                        ) : (
+                          <Link
+                            href={`/add?edit=${entry.id}`}
+                            aria-label={`Edit ${metric.label} reading from ${formatFullDate(entry.date)}`}
+                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-medium text-accent transition-colors duration-200 hover:bg-surface-2"
+                          >
+                            <PencilIcon />
+                          </Link>
+                        )}
                         <button
                           onClick={() => setPendingDelete(entry)}
                           aria-label={`Delete ${metric.label} reading from ${formatFullDate(entry.date)}`}

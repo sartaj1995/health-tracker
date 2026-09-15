@@ -43,48 +43,48 @@ function daysBefore(n: number): string {
 }
 
 describe("BMI derivation", () => {
-  // This is the subtlest logic in the app: BMI has no entries of its own, and
-  // each weight must be paired with the height that was on record on that date
-  // — not the latest one — or a mid-series height change rewrites history.
-  it("uses the height on record at the time of each weight", () => {
-    const entries = [
-      entry("height", 170, "2026-01-01"),
-      entry("weight", 72.25, "2026-02-01"), // 170cm -> 25.0
-      entry("height", 180, "2026-03-01"),
-      entry("weight", 81, "2026-04-01"), // 180cm -> 25.0
-    ];
-
-    const points = seriesFor("bmi", entries, profile);
-
-    expect(points).toHaveLength(2);
-    expect(points[0].value).toBe(25);
-    expect(points[1].value).toBe(25);
-  });
-
-  it("does not let a later height rewrite an earlier BMI", () => {
-    const withLaterHeight = seriesFor(
+  // BMI has no entries of its own. It comes from the weight series and the one
+  // height in Settings — and only that height.
+  it("applies the height in Settings to every weight", () => {
+    const points = seriesFor(
       "bmi",
-      [
-        entry("height", 170, "2026-01-01"),
-        entry("weight", 72.25, "2026-02-01"),
-        entry("height", 200, "2026-06-01"),
-      ],
-      profile,
+      [entry("weight", 72.25, "2026-02-01"), entry("weight", 86.7, "2026-04-01")],
+      { ...profile, heightCm: 170 },
     );
-    expect(withLaterHeight[0].value).toBe(25);
+    // 72.25 / 1.7^2 = 25.0 and 86.7 / 1.7^2 = 30.0
+    expect(points.map((p) => p.value)).toEqual([25, 30]);
   });
 
-  it("falls back to the profile height before the first height reading", () => {
-    const points = seriesFor("bmi", [entry("weight", 72.25, "2026-02-01")], {
-      ...profile,
-      heightCm: 170,
-    });
+  it("ignores old height readings, so Settings is the only height", () => {
+    // The bug this closes: a height reading used to take over from Settings for
+    // every later weight, so editing Settings changed nothing you could see.
+    const points = seriesFor(
+      "bmi",
+      [entry("height", 150, "2026-01-01"), entry("weight", 72.25, "2026-02-01")],
+      { ...profile, heightCm: 170 },
+    );
+    expect(points[0].value).toBe(25);
+  });
+
+  it("gives one BMI per day, the same point the weight chart shows", () => {
+    // Weighing twice in a day is a correction, and the weight series keeps the
+    // later edit. BMI used to plot both.
+    const earlier = entry("weight", 70, "2026-02-01", { updatedAt: "2026-02-01T08:00:00.000Z" });
+    const later = entry("weight", 72.25, "2026-02-01", { updatedAt: "2026-02-01T20:00:00.000Z" });
+    const points = seriesFor("bmi", [earlier, later], { ...profile, heightCm: 170 });
     expect(points).toHaveLength(1);
     expect(points[0].value).toBe(25);
+    expect(points[0].entryId).toBe(later.id);
   });
 
-  it("produces nothing when no height is known at all", () => {
+  it("produces nothing when no height is set", () => {
     expect(seriesFor("bmi", [entry("weight", 72, "2026-02-01")], profile)).toEqual([]);
+  });
+
+  it("produces nothing from height readings alone", () => {
+    // An old reading no longer stands in for a missing Settings height.
+    const entries = [entry("height", 170, "2026-01-01"), entry("weight", 72.25, "2026-02-01")];
+    expect(seriesFor("bmi", entries, profile)).toEqual([]);
   });
 
   it("ignores a nonsensical height rather than dividing by zero", () => {
@@ -310,14 +310,21 @@ describe("trackedMetricIds", () => {
     expect(ids).not.toContain("ldl");
   });
 
-  it("adds BMI once both weight and a height are available", () => {
-    const entries = [entry("weight", 70, "2026-01-01"), entry("height", 175, "2026-01-01")];
-    expect(trackedMetricIds(entries, profile)).toContain("bmi");
-  });
-
-  it("adds BMI from a profile height with no height reading", () => {
+  it("adds BMI once there is a weight and a height in Settings", () => {
     const entries = [entry("weight", 70, "2026-01-01")];
     expect(trackedMetricIds(entries, { ...profile, heightCm: 175 })).toContain("bmi");
+  });
+
+  it("does not add BMI from a height reading", () => {
+    // Height readings no longer count toward BMI; only Settings does.
+    const entries = [entry("weight", 70, "2026-01-01"), entry("height", 175, "2026-01-01")];
+    expect(trackedMetricIds(entries, profile)).not.toContain("bmi");
+  });
+
+  it("stops tracking height itself while its readings remain", () => {
+    // Retired: the readings stay in History but earn no place on the dashboard.
+    const entries = [entry("height", 175, "2026-01-01"), entry("weight", 70, "2026-01-01")];
+    expect(trackedMetricIds(entries, profile)).not.toContain("height");
   });
 
   it("does not offer BMI from weight alone", () => {
