@@ -185,6 +185,18 @@ export function MetricDetail({ metricId }: { metricId: string }) {
       <h1 className="text-2xl font-semibold tracking-tight">{metric.label}</h1>
       {metric.help ? <p className="mt-1 max-w-prose text-sm text-muted">{metric.help}</p> : null}
 
+      {/* Said here rather than only beside the ranges further down, because the
+          status pill above is where a wrong range does its damage. */}
+      {metric.bandsBySex && profile.sex === undefined ? (
+        <p className="mt-2 max-w-prose text-sm text-muted">
+          These are the male reference ranges.{" "}
+          <Link href="/settings" className="font-medium text-accent hover:underline">
+            Set your sex in Settings
+          </Link>{" "}
+          to use the right ones.
+        </p>
+      ) : null}
+
       {/*
         Sits under the title rather than inside the chart card because it scopes
         the whole page: the headline, the stats, the trend and the reference
@@ -483,6 +495,11 @@ export function MetricDetail({ metricId }: { metricId: string }) {
                 />
               </Card>
             </>
+          ) : null}
+          {metric.bandsBySex && profile.sex ? (
+            <p className="mt-2 px-1 text-xs text-muted">
+              Showing the {profile.sex} reference ranges.
+            </p>
           ) : null}
           <p className="mt-2 px-1 text-xs text-muted">
             General adult reference ranges, shown for context only. Your lab report and your doctor
