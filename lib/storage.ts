@@ -50,6 +50,30 @@ export const localRepo: HealthRepo = {
 };
 
 /**
+ * Ask the browser not to clear this data when the device runs short of space,
+ * and report whether it agreed.
+ *
+ * Chrome and Safari decide without asking anyone — Safari 17+ looks at things
+ * like whether the app was opened from the Home Screen — but Firefox puts the
+ * question to the person, so this is only worth calling once there are
+ * readings to keep. It is protection from eviction and nothing more: Safari
+ * has not said it lifts the rule that clears a site left unused for seven days
+ * of browsing, which only a Home Screen install or a backup gets around.
+ */
+export async function requestPersistence(
+  storage: Partial<Pick<StorageManager, "persist" | "persisted">> | undefined =
+    typeof navigator === "undefined" ? undefined : navigator.storage,
+): Promise<boolean> {
+  if (!storage?.persist || !storage.persisted) return false;
+  try {
+    // persisted() never prompts, so a grant from an earlier visit costs nothing.
+    return (await storage.persisted()) || (await storage.persist());
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Turn backup text into a snapshot, or explain why it cannot.
  *
  * Shared by the Settings file import and the Drive restore so the two can never

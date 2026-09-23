@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { driveConfigured } from "@/lib/drive";
-import { formatFullDate } from "@/lib/format";
+import { timeAgo } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
   SYNC_EVENT,
@@ -13,21 +13,6 @@ import {
   type SyncRecord,
 } from "@/lib/sync";
 import { BTN_PRIMARY, BTN_SECONDARY, Card, SectionTitle } from "./ui";
-
-function when(ms?: number | null): string {
-  if (!ms || Number.isNaN(ms)) return "never";
-  const diff = Date.now() - ms;
-  if (diff < 60_000) return "just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h ago`;
-  // Falls back to the app's own date style rather than the locale default,
-  // so this reads like every other date on screen.
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return formatFullDate(
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-  );
-}
 
 export function DriveCard() {
   const { entries, profile, importSnapshot } = useStore();
@@ -78,7 +63,7 @@ export function DriveCard() {
 
   if (!driveConfigured) {
     return (
-      <section className="mb-6">
+      <section id="drive-backup" className="mb-6 scroll-mt-20">
         <SectionTitle>Google Drive backup</SectionTitle>
         <Card>
           <p className="text-sm text-muted">
@@ -95,15 +80,15 @@ export function DriveCard() {
   }
 
   return (
-    <section className="mb-6">
+    <section id="drive-backup" className="mb-6 scroll-mt-20">
       <SectionTitle>Google Drive backup</SectionTitle>
       <Card className="space-y-3">
         {sync.conflict ? (
           <div className="space-y-3">
             <p className="text-sm">
               {sync.conflictFirstConnect
-                ? `Drive already has a backup from ${when(Date.parse(sync.conflictRemoteTime ?? ""))}, made on another device. Nothing has been overwritten — restore it here, or replace it with this device's readings.`
-                : `Drive holds a copy this device has not seen, from ${when(Date.parse(sync.conflictRemoteTime ?? ""))} — probably logged elsewhere. Nothing has been overwritten. Pick which one to keep.`}
+                ? `Drive already has a backup from ${timeAgo(Date.parse(sync.conflictRemoteTime ?? ""))}, made on another device. Nothing has been overwritten — restore it here, or replace it with this device's readings.`
+                : `Drive holds a copy this device has not seen, from ${timeAgo(Date.parse(sync.conflictRemoteTime ?? ""))} — probably logged elsewhere. Nothing has been overwritten. Pick which one to keep.`}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -125,7 +110,7 @@ export function DriveCard() {
         ) : sync.connected ? (
           <>
             <p className="text-sm text-muted">
-              Connected. Last backup {when(sync.lastSyncedAt)}
+              Connected. Last backup {timeAgo(sync.lastSyncedAt)}
               {sync.pendingSince ? " — a newer reading is still waiting to go up." : "."}
             </p>
             <div className="flex flex-wrap gap-2">

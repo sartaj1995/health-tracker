@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { BackupStatus } from "@/components/BackupStatus";
 import { MetricCard } from "@/components/MetricCard";
 import { MetricRow } from "@/components/MetricRow";
 import { PlusIcon } from "@/components/icons";
@@ -120,6 +121,7 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeading total={entries.length} />
+      <BackupStatus />
 
       {attention.length > 0 ? (
         <section className="mb-6">

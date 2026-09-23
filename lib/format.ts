@@ -83,6 +83,24 @@ export function daysAgo(iso: string): number {
 }
 
 /**
+ * How long ago something happened on this device's clock: "just now",
+ * "5 min ago", "3 h ago", then a date. For events like a backup, which have a
+ * time of day — a reading's date goes through relativeDate instead.
+ */
+export function timeAgo(ms: number | undefined, now: number = Date.now()): string {
+  if (!ms || Number.isNaN(ms)) return "never";
+  const diff = now - ms;
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h ago`;
+  // Falls back to the app's own date style rather than the locale default,
+  // so this reads like every other date on screen.
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return formatFullDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+}
+
+/**
  * A length of time in the unit a person would say it in: "9 days", "6 weeks",
  * "5 months", "2 years". Used for the span a chart covers, where nobody wants
  * to be told their weight fell over 847 days.

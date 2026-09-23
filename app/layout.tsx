@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fira_Code, Fira_Sans } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { DriveAutoBackup } from "@/components/DriveAutoBackup";
+import { SaveFailedBanner } from "@/components/SaveFailedBanner";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { ThemeSync } from "@/components/ThemeSync";
 import { StoreProvider } from "@/lib/store";
@@ -95,6 +96,7 @@ export default function RootLayout({
             id="main"
             className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-6 md:pb-16 md:pt-8"
           >
+            <SaveFailedBanner />
             {children}
           </main>
         </StoreProvider>

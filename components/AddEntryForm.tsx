@@ -27,7 +27,7 @@ function yesterdayISO(): string {
 export function AddEntryForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { entries, profile, addEntry, updateEntry, ready } = useStore();
+  const { entries, profile, addEntry, updateEntry, ready, saveFailed } = useStore();
 
   const editId = params.get("edit");
   const editing = editId ? entries.find((e) => e.id === editId) : undefined;
@@ -297,7 +297,17 @@ export function AddEntryForm() {
           {error}
         </p>
       ) : null}
-      {saved ? (
+      {/* Down here, next to the button, because the banner at the top of the
+          page is off screen by the time a phone has scrolled to Save. */}
+      {saved && saveFailed ? (
+        <p role="alert" className="mt-3 text-sm text-bad">
+          The reading is showing, but this device would not store it — it will be lost when
+          the app is closed.{" "}
+          <Link href="/settings#your-data" className="font-medium underline">
+            Back up now
+          </Link>
+        </p>
+      ) : saved ? (
         <p role="status" aria-live="polite" className="mt-3 text-sm text-good">
           {saved} — add another, or head back to the dashboard.
         </p>

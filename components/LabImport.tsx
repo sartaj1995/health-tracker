@@ -21,7 +21,7 @@ type Draft = ParsedRow & { include: boolean; key: number };
 
 export function LabImport() {
   const router = useRouter();
-  const { profile, addEntry, entries } = useStore();
+  const { profile, addEntry, entries, saveFailed } = useStore();
 
   const [text, setText] = useState("");
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
@@ -115,8 +115,12 @@ export function LabImport() {
   if (saved !== null) {
     return (
       <EmptyState
-        title={`${saved} reading${saved === 1 ? "" : "s"} saved`}
-        body="They are on your dashboard and in the charts now, each tagged as coming from a lab report."
+        title={`${saved} reading${saved === 1 ? "" : "s"} ${saveFailed ? "added, not stored" : "saved"}`}
+        body={
+          saveFailed
+            ? "They are on your dashboard for now, but this device would not store them — back them up before closing the app."
+            : "They are on your dashboard and in the charts now, each tagged as coming from a lab report."
+        }
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <button onClick={() => router.push("/")} className={BTN_PRIMARY}>
