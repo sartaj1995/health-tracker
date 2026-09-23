@@ -70,7 +70,9 @@ Grouped into eight categories so the dashboard stays readable as it fills up.
 
 Each metric carries the common adult clinical cutoffs, in the units Indian labs
 report. A reading is classified the moment you save it and shaded behind its
-chart, so you read a word rather than look up a number.
+chart, so you read a word rather than look up a number. Seven of them differ
+by sex — hemoglobin, ferritin, HDL, body fat, waist, creatinine and uric acid
+— and follow whichever you set in Settings.
 
 </td>
 </tr>
@@ -237,7 +239,7 @@ keys — the app runs complete on a fresh clone.
 
 ### Tests
 
-317 tests over the pure logic, run with `npm test` and on every pull request.
+357 tests over the pure logic, run with `npm test` and on every pull request.
 
 They exist mainly for one reason: a wrong reference threshold does not crash
 anything. It quietly reports a reading as **Normal** when it is not, and there

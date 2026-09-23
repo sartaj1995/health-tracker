@@ -91,7 +91,15 @@ export const METRICS: Metric[] = [
       { to: 25, level: "warn", label: "Elevated" },
       { to: null, level: "bad", label: "High" },
     ],
-    help: "Bands shown are the usual male reference. Healthy ranges for women run roughly 8-10 points higher.",
+    bandsBySex: {
+      female: [
+        { to: 16, level: "warn", label: "Very low" },
+        { to: 30, level: "good", label: "Healthy" },
+        { to: 35, level: "warn", label: "Elevated" },
+        { to: null, level: "bad", label: "High" },
+      ],
+    },
+    help: "Healthy ranges run roughly 8-10 points higher for women.",
   },
   {
     id: "waist",
@@ -108,6 +116,13 @@ export const METRICS: Metric[] = [
       { to: 100, level: "warn", label: "Elevated" },
       { to: null, level: "bad", label: "High" },
     ],
+    bandsBySex: {
+      female: [
+        { to: 80, level: "good", label: "Healthy" },
+        { to: 90, level: "warn", label: "Elevated" },
+        { to: null, level: "bad", label: "High" },
+      ],
+    },
     help: "South-Asian cutoffs: 90 cm for men, 80 cm for women.",
   },
 
@@ -295,7 +310,14 @@ export const METRICS: Metric[] = [
       { to: 60, level: "warn", label: "Acceptable" },
       { to: null, level: "good", label: "Protective" },
     ],
-    help: "The one where higher is better. Under 50 is considered low for women.",
+    bandsBySex: {
+      female: [
+        { to: 50, level: "bad", label: "Low" },
+        { to: 60, level: "warn", label: "Acceptable" },
+        { to: null, level: "good", label: "Protective" },
+      ],
+    },
+    help: "The one where higher is better. The low cutoff is 50 for women and 40 for men.",
   },
   {
     id: "triglycerides",
@@ -413,7 +435,14 @@ export const METRICS: Metric[] = [
       { to: 300, level: "good", label: "Normal" },
       { to: null, level: "warn", label: "High" },
     ],
-    help: "Lab ranges differ by sex; the lower bound quoted for women is often around 15.",
+    bandsBySex: {
+      female: [
+        { to: 15, level: "bad", label: "Low iron stores" },
+        { to: 200, level: "good", label: "Normal" },
+        { to: null, level: "warn", label: "High" },
+      ],
+    },
+    help: "Iron stores. Ranges differ by sex and between labs, so check yours against the report.",
   },
   {
     id: "hemoglobin",
@@ -431,7 +460,14 @@ export const METRICS: Metric[] = [
       { to: 17.5, level: "good", label: "Normal" },
       { to: null, level: "warn", label: "High" },
     ],
-    help: "Male reference. For women the normal range is roughly 12.0-15.5.",
+    bandsBySex: {
+      female: [
+        { to: 12, level: "bad", label: "Low" },
+        { to: 15.5, level: "good", label: "Normal" },
+        { to: null, level: "warn", label: "High" },
+      ],
+    },
+    help: "Normal runs roughly 13.0-17.5 for men and 12.0-15.5 for women.",
   },
 
   // ------------------------------------------------------------- Thyroid
@@ -499,7 +535,14 @@ export const METRICS: Metric[] = [
       { to: 1.3, level: "good", label: "Normal" },
       { to: null, level: "bad", label: "High" },
     ],
-    help: "A kidney-function marker. Muscle mass shifts it, so athletes often run high.",
+    bandsBySex: {
+      female: [
+        { to: 0.5, level: "warn", label: "Low" },
+        { to: 1.1, level: "good", label: "Normal" },
+        { to: null, level: "bad", label: "High" },
+      ],
+    },
+    help: "A kidney-function marker, and one that differs by sex. Muscle mass shifts it too, so athletes often run high.",
   },
   {
     id: "uricAcid",
@@ -517,6 +560,14 @@ export const METRICS: Metric[] = [
       { to: 7, level: "good", label: "Normal" },
       { to: null, level: "bad", label: "High" },
     ],
+    bandsBySex: {
+      female: [
+        { to: 2.5, level: "warn", label: "Low" },
+        { to: 6, level: "good", label: "Normal" },
+        { to: null, level: "bad", label: "High" },
+      ],
+    },
+    help: "Ranges differ by sex, running lower for women.",
   },
   {
     id: "alt",
@@ -637,7 +688,14 @@ export function bandsFor(metric: Metric, profile: Profile): Band[] | undefined {
   if (metric.id === "bmi") {
     return profile.bmiStandard === "who" ? BMI_WHO : BMI_ASIAN;
   }
-  return metric.bands;
+  /*
+   * A sex-specific ladder wins, but only once a sex has been chosen. Until then
+   * the metric's own bands stand, so nothing already saved reclassifies itself
+   * on a guess — and every caller gets this for free, because classify(),
+   * classifyReading(), the chart shading and the add-form preview all ask here.
+   */
+  const bySex = profile.sex ? metric.bandsBySex?.[profile.sex] : undefined;
+  return bySex ?? metric.bands;
 }
 
 export function classify(

@@ -9,6 +9,9 @@ export type Band = {
 
 export type Direction = "up" | "down" | "neutral";
 
+/** The two the reference ranges in this app actually differ by. */
+export type Sex = "male" | "female";
+
 export type Category =
   | "Body"
   | "Vitals"
@@ -31,6 +34,13 @@ export type Metric = {
   min?: number;
   max?: number;
   bands?: Band[];
+  /**
+   * Ranges that differ by sex, keyed by the sex they apply to. `bands` above
+   * stays the fallback: used when no sex is set, and for any sex with no entry
+   * here. Only the thresholds may differ — the rungs keep their names, so the
+   * same reading never reads as a different kind of thing for different people.
+   */
+  bandsBySex?: Partial<Record<Sex, Band[]>>;
   /**
    * Second number captured in the same entry, e.g. diastolic pressure.
    *
@@ -70,6 +80,12 @@ export type Entry = {
 
 export type Profile = {
   heightCm?: number;
+  /**
+   * Drives the reference ranges that differ by sex. Deliberately unset until
+   * someone chooses: no reading already saved should reclassify itself behind
+   * their back on the strength of a guess.
+   */
+  sex?: Sex;
   /** WHO cutoffs vs. the lower South-Asian ones. */
   bmiStandard: "who" | "asian";
   theme: "system" | "light" | "dark";

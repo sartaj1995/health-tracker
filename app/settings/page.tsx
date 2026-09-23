@@ -93,6 +93,32 @@ export default function SettingsPage() {
           </label>
 
           <div>
+            <span className="mb-1.5 block text-sm font-medium">Sex</span>
+            <div className="flex gap-2">
+              {(
+                [
+                  { key: undefined, label: "Not set" },
+                  { key: "male", label: "Male" },
+                  { key: "female", label: "Female" },
+                ] as const
+              ).map((option) => (
+                <Segment
+                  key={option.label}
+                  active={profile.sex === option.key}
+                  onClick={() => updateProfile({ sex: option.key })}
+                  className="flex-1"
+                >
+                  {option.label}
+                </Segment>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              Hemoglobin, ferritin, HDL, body fat, waist, creatinine and uric acid all have
+              different healthy ranges for men and women. Left unset, the app shows the male ones.
+            </p>
+          </div>
+
+          <div>
             <span className="mb-1.5 block text-sm font-medium">BMI cutoffs</span>
             <div className="flex gap-2">
               {(

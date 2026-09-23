@@ -417,3 +417,147 @@ describe("the second number's reference ladder", () => {
     expect(secondaryBands(getMetric("weight")!)).toBeUndefined();
   });
 });
+
+/**
+ * Seven metrics had one set of bands, and they were the male ones. A woman
+ * reading her own hemoglobin was told it was Low, in red, on a dashboard whose
+ * job is to mean exactly that. These are the tests that stop it coming back.
+ */
+describe("ranges that differ by sex", () => {
+  const sexed = METRICS.filter((m) => m.bandsBySex);
+
+  it("covers the metrics whose ranges actually differ", () => {
+    expect(sexed.map((m) => m.id).sort()).toEqual(
+      ["bodyFat", "creatinine", "ferritin", "hdl", "hemoglobin", "uricAcid", "waist"].sort(),
+    );
+  });
+
+  it("leaves everything as it was until a sex is chosen", () => {
+    // Nothing already saved may reclassify itself on a guess.
+    for (const metric of sexed) {
+      expect(bandsFor(metric, profile), metric.id).toBe(metric.bands);
+    }
+  });
+
+  it("gives men the metric's own bands", () => {
+    for (const metric of sexed) {
+      expect(bandsFor(metric, { ...profile, sex: "male" }), metric.id).toBe(metric.bands);
+    }
+  });
+
+  it("swaps in the female bands for women", () => {
+    for (const metric of sexed) {
+      expect(bandsFor(metric, { ...profile, sex: "female" }), metric.id).toBe(
+        metric.bandsBySex!.female,
+      );
+    }
+  });
+
+  it("leaves metrics without sex-specific ranges alone", () => {
+    const ldl = getMetric("ldl")!;
+    for (const sex of ["male", "female"] as const) {
+      expect(bandsFor(ldl, { ...profile, sex })).toBe(ldl.bands);
+    }
+  });
+
+  it("does not disturb BMI, which resolves on its own setting", () => {
+    const bmi = getMetric("bmi")!;
+    const who = bandsFor(bmi, { ...profile, sex: "female", bmiStandard: "who" });
+    expect(classify(24, who)?.label).toBe("Normal");
+  });
+});
+
+describe("the reading that started this", () => {
+  const hb = getMetric("hemoglobin")!;
+
+  it("reads a womans hemoglobin of 12.5 as Normal, not Low", () => {
+    expect(classify(12.5, bandsFor(hb, { ...profile, sex: "male" }))?.label).toBe("Low");
+    expect(classify(12.5, bandsFor(hb, { ...profile, sex: "female" }))?.label).toBe("Normal");
+  });
+
+  it("keeps it off the worth-a-closer-look list, which reads the level", () => {
+    // The dashboard collects anything not "good", so the level is what decides
+    // whether she is told to look into a perfectly ordinary result.
+    expect(classifyReading(hb, 12.5, undefined, { ...profile, sex: "female" })?.level).toBe("good");
+    expect(classifyReading(hb, 12.5, undefined, { ...profile, sex: "male" })?.level).toBe("bad");
+  });
+});
+
+describe("female cutoffs", () => {
+  const female: Profile = { ...profile, sex: "female" };
+  const cases: [string, number, string][] = [
+    ["hemoglobin", 11.9, "Low"],
+    ["hemoglobin", 12, "Normal"],
+    ["hemoglobin", 15.4, "Normal"],
+    ["hemoglobin", 15.5, "High"],
+
+    ["ferritin", 14, "Low iron stores"],
+    ["ferritin", 15, "Normal"],
+    ["ferritin", 199, "Normal"],
+    ["ferritin", 200, "High"],
+
+    ["hdl", 49, "Low"],
+    ["hdl", 50, "Acceptable"],
+    ["hdl", 60, "Protective"],
+
+    ["bodyFat", 15.9, "Very low"],
+    ["bodyFat", 16, "Healthy"],
+    ["bodyFat", 30, "Elevated"],
+    ["bodyFat", 35, "High"],
+
+    ["waist", 79, "Healthy"],
+    ["waist", 80, "Elevated"],
+    ["waist", 90, "High"],
+
+    ["creatinine", 0.49, "Low"],
+    ["creatinine", 0.5, "Normal"],
+    ["creatinine", 1.1, "High"],
+
+    ["uricAcid", 2.4, "Low"],
+    ["uricAcid", 2.5, "Normal"],
+    ["uricAcid", 6, "High"],
+  ];
+
+  it.each(cases)("%s at %s reads as %s for a woman", (id, value, expected) => {
+    expect(classify(value, bandsFor(getMetric(id)!, female))?.label).toBe(expected);
+  });
+});
+
+describe("the sex-specific ladders", () => {
+  const ladders = METRICS.flatMap((m) =>
+    Object.entries(m.bandsBySex ?? {}).map(
+      ([sex, bands]) => [`${m.label} (${sex})`, bands] as [string, Band[]],
+    ),
+  );
+
+  it.each(ladders)("%s is a well-formed ladder", (_label, bands) => {
+    bands.forEach((band, i) => {
+      if (i < bands.length - 1) expect(band.to).not.toBeNull();
+    });
+    expect(bands[bands.length - 1].to).toBeNull();
+
+    const closed = bands.slice(0, -1).map((b) => b.to as number);
+    for (let i = 1; i < closed.length; i++) {
+      expect(closed[i]).toBeGreaterThan(closed[i - 1]);
+    }
+
+    const good = bands.map((b, i) => (b.level === "good" ? i : -1)).filter((i) => i >= 0);
+    expect(good.length).toBeGreaterThan(0);
+    expect(good[good.length - 1] - good[0] + 1).toBe(good.length);
+  });
+
+  it("changes only the thresholds, never the rungs", () => {
+    // Same labels and same levels in the same order. A reading must not read as
+    // a different kind of thing depending on who is looking at it.
+    for (const metric of METRICS.filter((m) => m.bandsBySex)) {
+      for (const [sex, bands] of Object.entries(metric.bandsBySex!)) {
+        expect(bands.map((b) => b.label), `${metric.id} ${sex}`).toEqual(
+          metric.bands!.map((b) => b.label),
+        );
+        expect(bands.map((b) => b.level), `${metric.id} ${sex}`).toEqual(
+          metric.bands!.map((b) => b.level),
+        );
+      }
+    }
+  });
+});
