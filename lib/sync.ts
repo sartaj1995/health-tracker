@@ -18,7 +18,11 @@ export interface SyncRecord {
   fileId?: string;
   /** Drive's own modifiedTime for the version this device last wrote or read. */
   seenModifiedTime?: string;
-  /** Local clock, for display only. */
+  /**
+   * Local clock: the moment the copy now in Drive was taken from this device.
+   * A reading saved after it is not in Drive, which is how the dashboard
+   * tells a backup that is working from one that has quietly stopped.
+   */
   lastSyncedAt?: number;
   /** Set when Drive moved on without us, so nothing is overwritten silently. */
   conflict?: boolean;
@@ -94,6 +98,9 @@ export async function backUp(
   snapshot: Snapshot,
   { interactive = false, force = false } = {},
 ): Promise<BackupResult> {
+  // Stamped before the upload, not after: a reading saved while the request is
+  // in flight is not in this snapshot, and must not count as backed up.
+  const takenAt = Date.now();
   try {
     const token = await authorise(interactive);
     const record = loadSync();
@@ -122,7 +129,7 @@ export async function backUp(
       connected: true,
       fileId: written.id,
       seenModifiedTime: written.modifiedTime,
-      lastSyncedAt: Date.now(),
+      lastSyncedAt: takenAt,
       conflict: false,
     };
     saveSync(next);

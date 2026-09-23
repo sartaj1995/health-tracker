@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { migrateHeight, newId, parseSnapshot } from "./storage";
+import { migrateHeight, newId, parseSnapshot, requestPersistence } from "./storage";
 import { DEFAULT_PROFILE } from "./types";
 
 const reading = {
@@ -85,6 +85,43 @@ describe("parseSnapshot", () => {
 
   it("accepts an empty but valid backup", () => {
     expect(parseSnapshot(JSON.stringify({ entries: [] })).entries).toEqual([]);
+  });
+});
+
+describe("asking the browser to keep the data", () => {
+  it("reports no where the browser has no way to ask", async () => {
+    expect(await requestPersistence({})).toBe(false);
+  });
+
+  it("does not ask again when an earlier visit was already granted", async () => {
+    // Firefox shows a prompt for persist(); a repeat on every launch would nag.
+    let asked = false;
+    const granted = await requestPersistence({
+      persisted: async () => true,
+      persist: async () => {
+        asked = true;
+        return true;
+      },
+    });
+    expect(granted).toBe(true);
+    expect(asked).toBe(false);
+  });
+
+  it("asks when it has not been granted, and passes on the answer", async () => {
+    const ask = (answer: boolean) =>
+      requestPersistence({ persisted: async () => false, persist: async () => answer });
+    expect(await ask(true)).toBe(true);
+    expect(await ask(false)).toBe(false);
+  });
+
+  it("takes a browser that throws as a no instead of breaking the app", async () => {
+    const granted = await requestPersistence({
+      persisted: async () => {
+        throw new Error("blocked");
+      },
+      persist: async () => true,
+    });
+    expect(granted).toBe(false);
   });
 });
 

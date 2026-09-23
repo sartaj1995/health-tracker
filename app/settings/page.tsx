@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DriveCard } from "@/components/DriveCard";
 import { BTN_DANGER, BTN_SECONDARY, Card, SectionTitle, Segment } from "@/components/ui";
+import { loadLastFileBackup, recordFileBackup } from "@/lib/backup";
+import { timeAgo } from "@/lib/format";
 import { getMetric } from "@/lib/metrics";
 import { todayISO } from "@/lib/stats";
 import { parseSnapshot } from "@/lib/storage";
@@ -40,11 +42,22 @@ function toCSV(entries: Entry[]): string {
 }
 
 export default function SettingsPage() {
-  const { entries, profile, updateProfile, importSnapshot, clearAll, ready } = useStore();
+  const { entries, profile, updateProfile, importSnapshot, clearAll, ready, persistent } =
+    useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [fileAt, setFileAt] = useState<number | undefined>();
+
+  useEffect(() => setFileAt(loadLastFileBackup()), []);
+
+  /** An export, or a file just imported: either way a file now holds all of this. */
+  function noteFileBackup() {
+    const at = Date.now();
+    recordFileBackup(at);
+    setFileAt(at);
+  }
 
   function handleImport(file: File) {
     setError(null);
@@ -54,6 +67,7 @@ export default function SettingsPage() {
       .then((text) => {
         const snapshot = parseSnapshot(text);
         importSnapshot(snapshot);
+        noteFileBackup();
         setMessage(
           `Imported ${snapshot.entries.length} readings, replacing what was here before.`,
         );
@@ -169,7 +183,7 @@ export default function SettingsPage() {
         </Card>
       </section>
 
-      <section className="mb-6">
+      <section id="your-data" className="mb-6 scroll-mt-20">
         <SectionTitle>Your data</SectionTitle>
         <Card className="space-y-3">
           <p className="text-sm text-muted">
@@ -179,13 +193,15 @@ export default function SettingsPage() {
           </p>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() =>
+              onClick={() => {
                 download(
                   `health-tracker-${todayISO()}.json`,
                   JSON.stringify({ entries, profile }, null, 2),
                   "application/json",
-                )
-              }
+                );
+                // Only the JSON counts: a CSV cannot be imported back.
+                noteFileBackup();
+              }}
               className={`${BTN_SECONDARY} text-sm`}
             >
               Export JSON
@@ -214,6 +230,16 @@ export default function SettingsPage() {
               }}
             />
           </div>
+          {fileAt !== undefined || persistent !== null ? (
+            <p className="text-xs text-muted">
+              {fileAt !== undefined ? `Last backup file: ${timeAgo(fileAt)}. ` : null}
+              {persistent === true
+                ? "This browser has agreed not to clear your data to free up space."
+                : persistent === false
+                  ? "This browser has not agreed to keep your data if space runs low, so keep a backup."
+                  : null}
+            </p>
+          ) : null}
           {message ? (
             <p role="status" aria-live="polite" className="text-sm text-good">
               {message}

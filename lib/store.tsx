@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { localRepo, newId, type Snapshot } from "./storage";
+import { localRepo, newId, requestPersistence, type Snapshot } from "./storage";
 import { DEFAULT_PROFILE, type Entry, type Profile } from "./types";
 
 export type NewEntry = {
@@ -22,6 +22,15 @@ export type NewEntry = {
 
 type Store = {
   ready: boolean;
+  /**
+   * The device is refusing to store changes: out of space, or site data
+   * blocked in the browser's settings. Nothing else looks wrong when that
+   * happens — the reading appears, the chart moves — yet it all lives in
+   * memory and is gone when the app closes, so it has to be said out loud.
+   */
+  saveFailed: boolean;
+  /** Whether the browser agreed not to clear this data for space. Null until asked. */
+  persistent: boolean | null;
   entries: Entry[];
   profile: Profile;
   addEntry: (input: NewEntry) => Entry;
@@ -38,7 +47,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [persistent, setPersistent] = useState<boolean | null>(null);
   const loaded = useRef(false);
+  const saves = useRef(0);
 
   // Hydrate once on the client. Rendering an empty state first keeps the
   // server and client markup identical.
@@ -58,10 +70,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // Persist on every change, but never before the initial load has landed -
   // otherwise the empty starting state would overwrite real data.
+  // This also runs once straight after hydration, which makes it the check
+  // that storage works at all before anyone has typed a thing.
   useEffect(() => {
     if (!loaded.current) return;
-    void localRepo.save({ entries, profile });
+    // Only the newest save may report. localStorage settles in order, but a
+    // slower repo behind the same interface could let an old failure land
+    // after a newer success and raise the alarm over data that is safe.
+    const attempt = ++saves.current;
+    const settle = (failed: boolean) => {
+      if (attempt === saves.current) setSaveFailed(failed);
+    };
+    localRepo.save({ entries, profile }).then(
+      () => settle(false),
+      () => settle(true),
+    );
   }, [entries, profile]);
+
+  // Asked once there is something worth keeping, not on the first visit —
+  // Firefox shows the person a prompt for it.
+  const hasReadings = entries.length > 0;
+  useEffect(() => {
+    if (!hasReadings || persistent !== null) return;
+    let cancelled = false;
+    void requestPersistence().then((granted) => {
+      if (!cancelled) setPersistent(granted);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasReadings, persistent]);
 
   const addEntry = useCallback((input: NewEntry) => {
     const now = new Date().toISOString();
@@ -115,6 +153,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       ready,
+      saveFailed,
+      persistent,
       entries,
       profile,
       addEntry,
@@ -126,6 +166,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       ready,
+      saveFailed,
+      persistent,
       entries,
       profile,
       addEntry,

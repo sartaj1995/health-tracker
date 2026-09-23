@@ -9,6 +9,7 @@ import {
   formatValue,
   inSentence,
   relativeDate,
+  timeAgo,
 } from "./format";
 import { METRICS, getMetric } from "./metrics";
 import { todayISO } from "./stats";
@@ -121,6 +122,27 @@ describe("daysAgo", () => {
   it("counts whole days", () => {
     expect(daysAgo(todayISO())).toBe(0);
     expect(daysAgo(shift(10))).toBe(10);
+  });
+});
+
+describe("timeAgo", () => {
+  // Local time on purpose: the fallback date is the day on this device's clock.
+  const now = new Date(2026, 8, 24, 12, 0).getTime();
+  const MIN = 60_000;
+
+  it("says never when there is no time to describe", () => {
+    expect(timeAgo(undefined, now)).toBe("never");
+    expect(timeAgo(Number.NaN, now)).toBe("never");
+  });
+
+  it("counts minutes, then hours, rounding down", () => {
+    expect(timeAgo(now - 30_000, now)).toBe("just now");
+    expect(timeAgo(now - 5 * MIN, now)).toBe("5 min ago");
+    expect(timeAgo(now - 179 * MIN, now)).toBe("2 h ago");
+  });
+
+  it("switches to a written date once a day has passed", () => {
+    expect(timeAgo(now - 2 * 24 * 60 * MIN, now)).toBe("22 Sep 2026");
   });
 });
 

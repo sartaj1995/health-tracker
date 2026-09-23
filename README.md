@@ -239,7 +239,7 @@ keys — the app runs complete on a fresh clone.
 
 ### Tests
 
-357 tests over the pure logic, run with `npm test` and on every pull request.
+382 tests over the pure logic, run with `npm test` and on every pull request.
 
 They exist mainly for one reason: a wrong reference threshold does not crash
 anything. It quietly reports a reading as **Normal** when it is not, and there
@@ -274,6 +274,11 @@ two devices stay in step. It uses the `drive.file` scope, which grants access
 only to files this app itself created — the rest of your Drive stays invisible
 to it, and because Google classes that scope as non-sensitive there is no
 verification review and no "unverified app" warning.
+
+Either way, the dashboard says so whenever readings are sitting on the device
+with no backup, and says it more firmly after a week or ten readings. If the
+browser ever refuses to save at all — storage full, or site data blocked —
+every screen says that instead of carrying on as if nothing were wrong.
 
 <details>
 <summary><b>Setting up Drive backup</b> — about five minutes, needs its own Google Cloud project</summary>
@@ -424,6 +429,7 @@ backend.
 | [`lib/stats.ts`](lib/stats.ts) | Series building, derived BMI, summaries |
 | [`lib/storage.ts`](lib/storage.ts) | The `HealthRepo` seam and its `localStorage` implementation |
 | [`lib/drive.ts`](lib/drive.ts) · [`lib/sync.ts`](lib/sync.ts) | Google Drive OAuth and backup sync |
+| [`lib/backup.ts`](lib/backup.ts) | What no backup holds yet, and when the dashboard should say so |
 | [`lib/labImport.ts`](lib/labImport.ts) | Reads a pasted lab report into readings |
 | [`app/`](app) | Dashboard, add, import, history, settings, and `/m/[id]` per metric |
 | [`components/`](components) | Cards, rows, charts, sparklines, form |
