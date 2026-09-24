@@ -1,7 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { driveConfigured } from "@/lib/drive";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  beginRedirectSignIn,
+  completeRedirectSignIn,
+  driveConfigured,
+  hasLiveToken,
+  prepareSignIn,
+  signInMethod,
+  type SignInIntent,
+} from "@/lib/drive";
 import { timeAgo } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
@@ -15,9 +23,9 @@ import {
 import { BTN_PRIMARY, BTN_SECONDARY, Card, SectionTitle } from "./ui";
 
 export function DriveCard() {
-  const { entries, profile, importSnapshot } = useStore();
+  const { entries, profile, importSnapshot, saveFailed } = useStore();
   const [sync, setSync] = useState<SyncRecord>({ connected: false });
-  const [busy, setBusy] = useState<"backup" | "restore" | null>(null);
+  const [busy, setBusy] = useState<"backup" | "restore" | "signin" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
@@ -31,8 +39,55 @@ export function DriveCard() {
     return () => window.removeEventListener(SYNC_EVENT, follow);
   }, []);
 
+  // Fetched while the card is on screen, so a tap in a browser tab goes
+  // straight to Google's popup instead of spending itself on the download.
+  useEffect(() => {
+    if (driveConfigured) prepareSignIn();
+  }, []);
+
+  // A page restored from the back-forward cache — someone backing out of
+  // Google's page — would otherwise sit on "Opening Google" for good.
+  useEffect(() => {
+    const reset = (event: PageTransitionEvent) => {
+      if (event.persisted) setBusy(null);
+    };
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
+
+  /**
+   * In an installed app, a tap with no token in hand signs in by leaving for
+   * Google's page; what it was for is done on the way back, below. True once
+   * that is under way (or refused), so the caller goes no further.
+   */
+  const leaveToSignIn = useCallback(
+    (intent: SignInIntent): boolean => {
+      if (signInMethod() !== "redirect" || hasLiveToken()) return false;
+      setMessage(null);
+      setError(null);
+      // Leaving reloads the app, and readings this device could not store
+      // exist only in memory until then.
+      if (saveFailed) {
+        setError(
+          "Signing in to Google reloads the app, and this device is not saving readings right now. Export a backup file first, under Your data.",
+        );
+        return true;
+      }
+      setBusy("signin");
+      try {
+        beginRedirectSignIn(intent);
+      } catch (err) {
+        setBusy(null);
+        setError((err as Error).message);
+      }
+      return true;
+    },
+    [saveFailed],
+  );
+
   const runBackup = useCallback(
     async (force: boolean) => {
+      if (leaveToSignIn(force ? "replace" : "backup")) return;
       setBusy("backup");
       setMessage(null);
       setError(null);
@@ -43,10 +98,11 @@ export function DriveCard() {
       // A conflict needs no message here — the card re-renders into the
       // conflict branch, which explains itself.
     },
-    [entries, profile],
+    [entries, profile, leaveToSignIn],
   );
 
   const runRestore = useCallback(async () => {
+    if (leaveToSignIn("restore")) return;
     setBusy("restore");
     setMessage(null);
     setError(null);
@@ -59,7 +115,20 @@ export function DriveCard() {
     } else {
       setError(result.message);
     }
-  }, [importSnapshot]);
+  }, [importSnapshot, leaveToSignIn]);
+
+  // Back from Google's page: keep the token, then do what the tap was for.
+  // The person already confirmed a restore or a replace before leaving.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current) return;
+    resumed.current = true;
+    const returned = completeRedirectSignIn();
+    if (!returned) return;
+    if (!returned.ok) setError(returned.message);
+    else if (returned.intent === "restore") void runRestore();
+    else void runBackup(returned.intent === "replace");
+  }, [runBackup, runRestore]);
 
   if (!driveConfigured) {
     return (
@@ -158,6 +227,11 @@ export function DriveCard() {
 
         {sync.lastError && !sync.conflict ? (
           <p className="text-sm text-warn">Last attempt failed: {sync.lastError}</p>
+        ) : null}
+        {busy === "signin" ? (
+          <p role="status" aria-live="polite" className="text-sm text-muted">
+            Opening Google&apos;s sign-in page…
+          </p>
         ) : null}
         {message ? (
           <p role="status" aria-live="polite" className="text-sm text-good">
