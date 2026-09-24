@@ -301,7 +301,16 @@ every screen says that instead of carrying on as if nothing were wrong.
 5. Under **Authorised JavaScript origins**, add both:
    - `http://localhost:3000`
    - your deployed origin, e.g. `https://health-tracker-ssd.vercel.app`
-6. Copy the client ID.
+6. Under **Authorised redirect URIs**, add the Settings page on both:
+   - `http://localhost:3000/settings`
+   - your deployed origin's, e.g. `https://health-tracker-ssd.vercel.app/settings`
+
+   An app installed to an iPhone's Home Screen cannot finish a sign-in popup —
+   iOS opens it somewhere the app never hears back from — so there the app
+   leaves for Google's sign-in page and comes back to Settings instead. Without
+   these, that sign-in stops on Google's `redirect_uri_mismatch` error. Browser
+   tabs keep using the popup.
+7. Copy the client ID.
 
 Locally, put it in `.env.local` (gitignored):
 
