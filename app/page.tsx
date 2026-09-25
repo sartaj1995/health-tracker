@@ -5,8 +5,8 @@ import { useMemo } from "react";
 import { BackupStatus } from "@/components/BackupStatus";
 import { MetricCard } from "@/components/MetricCard";
 import { MetricRow } from "@/components/MetricRow";
-import { PlusIcon } from "@/components/icons";
-import { BTN_PRIMARY, Card, EmptyState, SectionTitle, StatusPill } from "@/components/ui";
+import { StartHere } from "@/components/StartHere";
+import { Card, SectionTitle, StatusPill } from "@/components/ui";
 import { daysAgo, formatReading, relativeDate } from "@/lib/format";
 import { CATEGORY_ORDER, METRICS, classifyReading, getMetric } from "@/lib/metrics";
 import { seriesFor, summarize, trackedMetricIds, type Point } from "@/lib/stats";
@@ -104,16 +104,7 @@ export default function DashboardPage() {
     return (
       <>
         <PageHeading total={0} />
-        <EmptyState
-          title="Nothing logged yet"
-          body="Add your first reading — weight, a blood test result, blood pressure, anything. Charts and reference ranges appear as soon as there is something to plot."
-          action={
-            <Link href="/add" className={BTN_PRIMARY}>
-              <PlusIcon className="h-4 w-4" />
-              Add a reading
-            </Link>
-          }
-        />
+        <StartHere />
       </>
     );
   }

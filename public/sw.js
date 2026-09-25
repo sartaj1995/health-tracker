@@ -10,6 +10,7 @@ const SHELL = [
   "/history",
   "/import",
   "/settings",
+  "/welcome",
   "/manifest.webmanifest",
   "/icon.svg",
 ];

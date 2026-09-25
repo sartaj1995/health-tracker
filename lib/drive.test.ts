@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isInstalledApp, readSignInResponse, signInUrl, type PendingSignIn } from "./drive";
+import {
+  isInstalledApp,
+  isLocalPath,
+  readSignInResponse,
+  signInUrl,
+  type PendingSignIn,
+} from "./drive";
 
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const NOW = Date.parse("2026-09-24T12:00:00.000Z");
@@ -161,5 +167,31 @@ describe("telling an installed app from a browser tab", () => {
       },
     };
     expect(isInstalledApp(throwing)).toBe(false);
+  });
+});
+
+/**
+ * A sign-in started in the first run is sent on from Settings to wherever it
+ * began, with a bearer token in its fragment. That destination must be on
+ * this site, whatever the stored record says.
+ */
+describe("where a sign-in may be sent on to", () => {
+  it("accepts a page on this site, with its query", () => {
+    expect(isLocalPath("/welcome?step=backup")).toBe(true);
+    expect(isLocalPath("/settings")).toBe(true);
+  });
+
+  it("refuses anything that could reach another host", () => {
+    expect(isLocalPath("//elsewhere.example/steal")).toBe(false);
+    expect(isLocalPath("https://elsewhere.example")).toBe(false);
+    // Some browsers read a backslash as a slash, making this "//elsewhere".
+    expect(isLocalPath("/\\elsewhere.example")).toBe(false);
+  });
+
+  it("refuses what is not a path at all", () => {
+    expect(isLocalPath("welcome")).toBe(false);
+    expect(isLocalPath("")).toBe(false);
+    expect(isLocalPath(undefined)).toBe(false);
+    expect(isLocalPath(42)).toBe(false);
   });
 });

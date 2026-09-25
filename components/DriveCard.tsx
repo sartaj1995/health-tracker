@@ -22,7 +22,12 @@ import {
 } from "@/lib/sync";
 import { BTN_PRIMARY, BTN_SECONDARY, Card, SectionTitle } from "./ui";
 
-export function DriveCard() {
+/**
+ * `resumeAt` is where a sign-in by redirect should finish, when that is not
+ * Settings: the first run passes its own backup step, so an installed app
+ * comes back to the setup it left rather than to the Settings page.
+ */
+export function DriveCard({ resumeAt }: { resumeAt?: string } = {}) {
   const { entries, profile, importSnapshot, saveFailed } = useStore();
   const [sync, setSync] = useState<SyncRecord>({ connected: false });
   const [busy, setBusy] = useState<"backup" | "restore" | "signin" | null>(null);
@@ -75,14 +80,14 @@ export function DriveCard() {
       }
       setBusy("signin");
       try {
-        beginRedirectSignIn(intent);
+        beginRedirectSignIn(intent, resumeAt);
       } catch (err) {
         setBusy(null);
         setError((err as Error).message);
       }
       return true;
     },
-    [saveFailed],
+    [saveFailed, resumeAt],
   );
 
   const runBackup = useCallback(

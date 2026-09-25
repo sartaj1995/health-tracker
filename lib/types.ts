@@ -81,6 +81,11 @@ export type Entry = {
 export type Profile = {
   heightCm?: number;
   /**
+   * How height is shown and typed. Always stored in centimetres; this only
+   * remembers that someone thinks of it as "5 ft 6".
+   */
+  heightUnit?: "cm" | "ft";
+  /**
    * Drives the reference ranges that differ by sex. Deliberately unset until
    * someone chooses: no reading already saved should reclassify itself behind
    * their back on the strength of a guess.
