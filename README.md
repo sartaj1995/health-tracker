@@ -190,9 +190,13 @@ Screen**. It becomes an app: own icon, full screen, works on the Underground.
 **3. Deploy your own.** Below. Two minutes, free tier, and then the URL is
 yours rather than mine.
 
-> **First run tip.** Set your **height** in Settings once — it is what turns
-> every weight reading into a BMI. Then pin the three or four metrics you
-> actually care about; the dashboard reorganises itself around them.
+> **The first run.** Open it with nothing logged and the dashboard offers a
+> short setup, one question to a screen: your **height** (in cm, or feet and
+> inches), which turns every weight into a BMI; your **sex**, which seven
+> reference ranges depend on; the few metrics to **pin** to the top; and a
+> **Google Drive backup**, where the build has one. All of it can be skipped,
+> and it can be walked through again from Settings — handy when you are
+> setting the app up on someone else's phone.
 
 <br>
 

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { DriveCard } from "@/components/DriveCard";
+import { HeightField } from "@/components/HeightField";
 import { BTN_DANGER, BTN_SECONDARY, Card, SectionTitle, Segment } from "@/components/ui";
 import { loadLastFileBackup, recordFileBackup } from "@/lib/backup";
 import { timeAgo } from "@/lib/format";
@@ -81,30 +83,28 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+      <p className="mb-5 mt-1 text-sm text-muted">
+        Setting this up for someone?{" "}
+        <Link href="/welcome" className="font-medium text-accent hover:underline">
+          Walk through the first-run setup
+        </Link>
+        .
+      </p>
 
       <section className="mb-6">
         <SectionTitle>You</SectionTitle>
         <Card className="space-y-4">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Height</span>
-            <div className="flex items-center gap-2">
-              <input
-                value={profile.heightCm ?? ""}
-                onChange={(e) => {
-                  const num = Number(e.target.value);
-                  updateProfile({
-                    heightCm: e.target.value.trim() === "" || !Number.isFinite(num) ? undefined : num,
-                  });
-                }}
-                inputMode="decimal"
-                type="text"
-                placeholder="175"
-                className="tnum min-h-11 w-32 rounded-xl border border-border bg-surface-2 px-3 py-2 outline-none transition-colors duration-200 focus:border-accent"
-              />
-              <span className="text-sm text-muted">cm — used to work out your BMI</span>
-            </div>
-          </label>
+          <fieldset>
+            <legend className="mb-1.5 block text-sm font-medium">Height</legend>
+            <HeightField
+              valueCm={profile.heightCm}
+              unit={profile.heightUnit ?? "cm"}
+              onChange={(heightCm) => updateProfile({ heightCm })}
+              onUnitChange={(heightUnit) => updateProfile({ heightUnit })}
+            />
+            <p className="mt-1.5 text-xs text-muted">Used to work out your BMI.</p>
+          </fieldset>
 
           <div>
             <span className="mb-1.5 block text-sm font-medium">Sex</span>

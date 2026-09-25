@@ -292,7 +292,29 @@ export function authorise(interactive: boolean): Promise<string> {
 export type SignInIntent = "backup" | "replace" | "restore";
 const INTENTS: readonly SignInIntent[] = ["backup", "replace", "restore"];
 
-export type PendingSignIn = { state: string; intent: SignInIntent };
+export type PendingSignIn = {
+  state: string;
+  intent: SignInIntent;
+  /**
+   * Where the sign-in was started, when that was not Settings. Google always
+   * sends the answer back to Settings — the one registered address — and it
+   * is passed on from there. The page named must show the Drive card.
+   */
+  resumeAt?: string;
+};
+
+/**
+ * A path on this site, and nothing that could leave it: "//elsewhere.example"
+ * and a backslash both read as another host to some browsers.
+ */
+export function isLocalPath(path: unknown): path is string {
+  return (
+    typeof path === "string" &&
+    path.startsWith("/") &&
+    !path.startsWith("//") &&
+    !path.includes("\\")
+  );
+}
 
 /** The address of Google's sign-in page, for a sign-in that comes back here. */
 export function signInUrl({
@@ -326,12 +348,13 @@ export function signInUrl({
  * Throws, without leaving, when that cannot be remembered: a token that comes
  * back to a device with no record of asking for it gets thrown away.
  */
-export function beginRedirectSignIn(intent: SignInIntent): void {
+export function beginRedirectSignIn(intent: SignInIntent, resumeAt?: string): void {
   if (!CLIENT_ID) throw new Error("Google Drive is not configured for this build.");
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   const pending: PendingSignIn = {
     state: Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(""),
     intent,
+    ...(isLocalPath(resumeAt) ? { resumeAt } : {}),
   };
   try {
     window.localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
@@ -404,19 +427,34 @@ export function readSignInResponse(
   };
 }
 
-/** Read the record of a sign-in in progress, and clear it: each is good for one answer. */
-function takePending(): PendingSignIn | null {
+/** The record of a sign-in in progress, if there is a sound one. */
+function readPending(): PendingSignIn | null {
   try {
     const raw = window.localStorage.getItem(PENDING_KEY);
-    window.localStorage.removeItem(PENDING_KEY);
     const pending = raw ? (JSON.parse(raw) as Partial<PendingSignIn>) : null;
-    return pending &&
-      typeof pending.state === "string" &&
-      INTENTS.includes(pending.intent as SignInIntent)
-      ? (pending as PendingSignIn)
-      : null;
+    if (
+      !pending ||
+      typeof pending.state !== "string" ||
+      !INTENTS.includes(pending.intent as SignInIntent)
+    ) {
+      return null;
+    }
+    return {
+      state: pending.state,
+      intent: pending.intent as SignInIntent,
+      ...(isLocalPath(pending.resumeAt) ? { resumeAt: pending.resumeAt } : {}),
+    };
   } catch {
     return null;
+  }
+}
+
+/** Each record is good for one answer. */
+function clearPending(): void {
+  try {
+    window.localStorage.removeItem(PENDING_KEY);
+  } catch {
+    // Nothing was stored, then.
   }
 }
 
@@ -424,12 +462,22 @@ export type SignInReturn = { ok: true; intent: SignInIntent } | { ok: false; mes
 
 /**
  * Finish a sign-in that left for Google's page, if this page load is the way
- * back from one. Null when there is nothing to finish.
+ * back from one. Null when there is nothing to finish here.
  */
 export function completeRedirectSignIn(): SignInReturn | null {
   if (typeof window === "undefined") return null;
   const fragment = window.location.hash;
   if (!answerIn(fragment)) return null;
+
+  // Google always answers at Settings. A sign-in started elsewhere is sent on,
+  // answer and all, to finish where the person was — the record stays for the
+  // page that takes it.
+  const pending = readPending();
+  const here = window.location.pathname + window.location.search;
+  if (pending?.resumeAt && pending.resumeAt !== here) {
+    window.location.replace(pending.resumeAt + fragment);
+    return null;
+  }
 
   // Out of the address bar, and out of history, before anything else runs.
   window.history.replaceState(
@@ -437,7 +485,8 @@ export function completeRedirectSignIn(): SignInReturn | null {
     "",
     window.location.pathname + window.location.search,
   );
-  const answer = readSignInResponse(fragment, takePending(), Date.now());
+  clearPending();
+  const answer = readSignInResponse(fragment, pending, Date.now());
   if (!answer) return null;
   if (!answer.ok) return answer;
   remember(answer.token, answer.expiresAt);
